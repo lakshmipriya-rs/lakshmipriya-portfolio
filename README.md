@@ -1,6 +1,14 @@
-# Lakshmipriya R — DevOps / Cloud Portfolio
+# Lakshmipriya RajeshKanna | DevOps Portfolio
 
-A recruiter-focused portfolio for DevOps, SRE and Platform Engineering applications.
+Terminal-native portfolio for DevOps, Cloud, and Platform Engineering work.
+
+## Stack
+
+- Vite
+- React
+- TypeScript
+- CSS variables and accessible inline SVG
+- GitHub Actions and GitHub Pages
 
 ## Run locally
 
@@ -9,16 +17,15 @@ npm install
 npm run dev
 ```
 
-## Production build
+## Build
 
 ```bash
 npm run build
-npm run preview
 ```
 
-## Notes
+The production site uses the GitHub Pages base path `/lakshmipriya-portfolio/`.
+Deployments run from `.github/workflows/deploy.yml`.
 
-- Replace `public/resume.pdf` with the current resume.
-- The content is intentionally centered on DevOps/SRE/Platform Engineering.
-- Update project details only with claims you can substantiate in interviews.
-- Social links currently point to the public LinkedIn and GitHub profiles.
+## Edit content
+
+Portfolio content, metrics, case-study flows, experience, education, and stack data live in `src/data/content.ts`.
