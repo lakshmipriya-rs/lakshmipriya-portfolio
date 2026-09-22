@@ -10,6 +10,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "check:type": "node scripts/check-type.mjs",
     "preview": "vite preview",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -18,7 +19,6 @@
     "check": "npm run format:check && npm run lint && npm run test:run && npm run build"
   },
   "dependencies": {
-    "@fontsource-variable/inter": "^5.2.8",
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "lucide-react": "^1.24.0",
     "react": "^19.2.7",

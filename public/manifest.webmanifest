@@ -1,11 +1,11 @@
 {
-  "name": "Lakshmipriya | DevOps, Cloud & Systems Engineer",
-  "short_name": "Priya",
-  "description": "Azure Cloud Operations Portfolio",
+  "name": "LP | Lakshmipriya RajeshKanna",
+  "short_name": "LP",
+  "description": "DevOps, Cloud, and Platform Engineer",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#050b14",
-  "theme_color": "#050b14",
+  "background_color": "#080B0F",
+  "theme_color": "#080B0F",
   "icons": [
     {
       "src": "/favicon.svg",

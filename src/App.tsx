@@ -1,90 +1,1186 @@
-import { LazyMotion, domAnimation } from "motion/react";
-import { m } from "motion/react";
-import { PortfolioPreloader } from "./components/layout/PortfolioPreloader";
-import { Header } from "./components/layout/Header";
-import { Footer } from "./components/layout/Footer";
-import { ScrollProgress } from "./components/layout/ScrollProgress";
-import { SkipLink } from "./components/common/SkipLink";
-import { useActiveSection } from "./hooks/useActiveSection";
-import { useIntroLoader } from "./hooks/useIntroLoader";
-import { navigation } from "./data/navigation";
-import { profile } from "./data/profile";
-import { HeroSection } from "./sections/HeroSection";
-import { AboutSection } from "./sections/AboutSection";
-import { ExpertiseSection } from "./sections/ExpertiseSection";
-import { ExperienceSection } from "./sections/ExperienceSection";
-import { ProjectsSection } from "./sections/ProjectsSection";
-import { QualificationsSection } from "./sections/QualificationsSection";
-import { ContactSection } from "./sections/ContactSection";
-import { useLanguage } from "./hooks/useLanguage";
+import { useEffect, useRef, useState } from "react";
+import {
+  ArrowUpRight,
+  Check,
+  ChevronDown,
+  Clipboard,
+  Command,
+  Download,
+  Mail,
+  Menu,
+  Moon,
+  Pause,
+  Play,
+  RotateCcw,
+  Square,
+  Sun,
+  X,
+} from "lucide-react";
+import {
+  allTags,
+  content,
+  type CaseStudy,
+  type FlowStep,
+} from "./data/content";
+
+const base = import.meta.env.BASE_URL;
+const buildTime = import.meta.env.VITE_BUILD_TIME ?? "unknown";
+const caseMatchesTool = (item: CaseStudy, tool: string) =>
+  item.stack.some(
+    (entry) =>
+      entry.toLowerCase().includes(tool.toLowerCase()) ||
+      tool.toLowerCase().includes(entry.toLowerCase()),
+  );
+const toolIndexedCases = content.cases.slice(2);
+const experienceForTool = (tool: string) =>
+  content.experience.find((item) => item.stack.includes(tool));
+
+function SectionLabel({
+  index,
+  children,
+}: {
+  index: string;
+  children: string;
+}) {
+  return (
+    <p className="section-label">
+      <span>{index}</span>
+      {children}
+    </p>
+  );
+}
+
+function CountMetric({
+  value,
+  detail,
+  onClick,
+  caseTitle,
+}: {
+  value: string;
+  detail: string;
+  onClick?: () => void;
+  caseTitle?: string;
+}) {
+  const [display, setDisplay] = useState(value);
+  useEffect(() => {
+    if (!/^\s*[~$]?\d+(?:\.\d+)?\s*[%+]?\s*$/.test(value)) return;
+    const numeric = Number.parseFloat(value.replace(/[^\d.]/g, ""));
+    if (!Number.isFinite(numeric)) return;
+    let frame = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const progress = Math.min((now - start) / 900, 1);
+      const next = numeric * (1 - Math.pow(1 - progress, 3));
+      const prefix = value.startsWith("$")
+        ? "$"
+        : value.startsWith("~")
+          ? "~"
+          : "";
+      const suffix = value.includes("%")
+        ? "%"
+        : value.includes("+")
+          ? "+"
+          : value.includes(" min")
+            ? " min"
+            : "";
+      setDisplay(
+        `${prefix}${Number.isInteger(numeric) ? Math.round(next) : next.toFixed(2)}${suffix}`,
+      );
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    };
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [value]);
+  const contentNode = (
+    <>
+      <strong>{display}</strong>
+      <span>{detail}</span>
+    </>
+  );
+  return onClick ? (
+    <button
+      className="metric metric-button"
+      onClick={onClick}
+      title={caseTitle}
+    >
+      {contentNode}
+      <span className="metric-tip">open {caseTitle}</span>
+    </button>
+  ) : (
+    <div className="metric">{contentNode}</div>
+  );
+}
+
+function FilterChips({
+  active,
+  select,
+  tools,
+}: {
+  active: string;
+  select: (tag: string) => void;
+  tools?: string[];
+}) {
+  const chips = tools ?? allTags;
+  return (
+    <div className="filter-row" aria-label="Filter case studies">
+      <button
+        className={active === "all" ? "filter active" : "filter"}
+        onClick={() => select("all")}
+      >
+        all
+      </button>
+      {chips.map((tag) => (
+        <button
+          className={active === tag ? "filter active" : "filter"}
+          key={tag}
+          onClick={() => select(tag)}
+        >
+          {tag}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function StepDetail({ step, onCopy }: { step: FlowStep; onCopy: () => void }) {
+  return (
+    <div className="step-detail">
+      <div>
+        <h4 className="role-step-title">What happens</h4>
+        <p>{step.summary}</p>
+        <ul>
+          {step.bullets.map((bullet) => (
+            <li key={bullet}>{bullet}</li>
+          ))}
+        </ul>
+      </div>
+      <div>
+        <h4 className="role-step-title">Tool</h4>
+        <div className="tool-list">
+          {step.tool.map((tool) => (
+            <span key={tool}>{tool}</span>
+          ))}
+        </div>
+        <h4 className="role-step-title">
+          Snippet <small>illustrative</small>
+        </h4>
+        <div className="snippet">
+          <button
+            className="copy-button"
+            onClick={onCopy}
+            aria-label="Copy illustrative snippet"
+          >
+            <Clipboard size={14} />
+          </button>
+          <pre>{step.snippet ?? ""}</pre>
+        </div>
+        <h4 className="role-step-title">Outcome</h4>
+        <p className="step-outcome">{step.outcome ?? ""}</p>
+      </div>
+    </div>
+  );
+}
+
+function CaseResult({ text }: { text: string }) {
+  return (
+    <p className="case-result">
+      {text.split(/(7 days|approximately 14 minutes|~14 minutes)/g).map((part) =>
+        /^(7 days|approximately 14 minutes|~14 minutes)$/.test(part) ? (
+          <span className="key-result" key={part}>{part}</span>
+        ) : part,
+      )}
+    </p>
+  );
+}
+
+function HeroPipelineCard({ onOpenCase }: { onOpenCase: (step: number) => void }) {
+  const cardRef = useRef<HTMLElement>(null);
+  const stages = content.cases.find((item) => item.id === "vm-provisioning")?.steps ?? [];
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const stageDuration = 1600;
+  const runDuration = stages.length * stageDuration;
+  const [elapsed, setElapsed] = useState(reduced ? runDuration : 0);
+  const [paused, setPaused] = useState(reduced);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [visible, setVisible] = useState(true);
+  const [selected, setSelected] = useState<number | null>(null);
+
+  useEffect(() => {
+    const node = cardRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting));
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    const onVisibility = () => setVisible(document.visibilityState === "visible");
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
+  useEffect(() => {
+    if (reduced || paused || hovered || focused || !visible) return;
+    let last = performance.now();
+    const timer = window.setInterval(() => {
+      const now = performance.now();
+      setElapsed((current) => {
+        const next = current + now - last;
+        last = now;
+        return next >= runDuration + 2000 ? 0 : Math.min(next, runDuration + 2000);
+      });
+    }, 50);
+    return () => window.clearInterval(timer);
+  }, [focused, hovered, paused, reduced, runDuration, visible]);
+
+  const completed = elapsed >= runDuration;
+  const active = completed ? stages.length - 1 : Math.min(Math.floor(elapsed / stageDuration), stages.length - 1);
+  const visibleLogs = reduced ? content.pipelineLogs : content.pipelineLogs.slice(0, Math.min(content.pipelineLogs.length, active + 1));
+  const clockSeconds = Math.round(Math.min(elapsed / runDuration, 1) * 14 * 60);
+  const clock = `${String(Math.floor(clockSeconds / 60)).padStart(2, "0")}:${String(clockSeconds % 60).padStart(2, "0")}:00`;
+  const reset = () => {
+    setElapsed(0);
+    setSelected(null);
+    setPaused(false);
+  };
+  const chooseStage = (index: number) => {
+    setPaused(true);
+    setSelected(index);
+    setElapsed(index * stageDuration);
+  };
+  return (
+    <section
+      className="hero-pipeline"
+      ref={cardRef}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node)) setFocused(false);
+      }}
+      aria-label="Illustrative VM provisioning pipeline"
+    >
+      <div className="pipeline-header">
+        <span>vm-provisioning</span>
+        <span className="pipeline-badge"><i /> simulated run</span>
+        <button className="pipeline-toggle" onClick={() => (paused ? reset() : setPaused(true))} aria-label={paused ? "Play pipeline" : "Pause pipeline"}>
+          {paused ? <Play size={13} /> : <Pause size={13} />}
+        </button>
+      </div>
+      <div className="pipeline-stages">
+        {stages.map((stage, index) => {
+          const done = reduced || index < active || completed;
+          const isActive = !done && index === active;
+          return (
+            <div className="pipeline-stage-row" key={stage.id}>
+              {index > 0 ? <span className={done || isActive ? "pipeline-connector flowing" : "pipeline-connector"} /> : null}
+              <button className={`pipeline-stage ${done ? "done" : isActive ? "active" : ""}`} onClick={() => chooseStage(index)} aria-pressed={selected === index}>
+                <span className="pipeline-stage-mark">{done ? <span>✓</span> : isActive ? <i /> : null}</span>
+                <span><strong>{stage.label}</strong><small>{stage.id === "request" ? "self-service · RBAC" : stage.id === "placement" ? "vSphere · ESXi" : stage.id === "network" ? "IPAM · DNS" : stage.id === "configure" ? "Windows · Ansible · WinRM" : stage.id === "environment" ? "environment-specific config" : "handoff"}</small></span>
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      <div className="pipeline-clock"><span>{completed ? "ready" : `${clock} elapsed`}</span><span>target ~14 min</span></div>
+      <div className="pipeline-logs" aria-live="polite">
+        {visibleLogs.map((log) => <p className="pipeline-log" key={log.time}><span>{log.time}</span>{log.message}</p>)}
+      </div>
+      <p className="pipeline-note">illustrative log · time compressed</p>
+      <div className="pipeline-metrics">
+        {content.metrics.map((metric) => <CountMetric key={metric.detail} value={metric.value} detail={metric.detail} />)}
+      </div>
+      {selected !== null ? (
+        <div className="pipeline-popover">
+          <strong>{stages[selected].label}</strong>
+          <ul>{stages[selected].bullets.slice(0, 2).map((bullet) => <li key={bullet}>{bullet}</li>)}</ul>
+          <a href={`#vm-provisioning/step-${selected + 1}`} onClick={() => onOpenCase(selected)}>open case study</a>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function CaseFlow({ steps, caseId }: { steps: FlowStep[]; caseId: string }) {
+  const hashStep =
+    Number.parseInt(window.location.hash.match(/step-(\d+)/)?.[1] ?? "1", 10) -
+    1;
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const [selected, setSelected] = useState(
+    Number.isFinite(hashStep) && hashStep >= 0
+      ? Math.min(hashStep, steps.length - 1)
+      : 0,
+  );
+  const [autoFlow, setAutoFlow] = useState(!reduced);
+  const [running, setRunning] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const stepRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const handleHash = () => {
+      const next =
+        Number.parseInt(
+          window.location.hash.match(/step-(\d+)/)?.[1] ?? "1",
+          10,
+        ) - 1;
+      if (next >= 0 && next < steps.length) {
+        setSelected(next);
+        setAutoFlow(false);
+      }
+    };
+    window.addEventListener("hashchange", handleHash);
+    return () => window.removeEventListener("hashchange", handleHash);
+  }, [steps.length]);
+  useEffect(() => {
+    if (!autoFlow || running || reduced) return;
+    const timer = window.setInterval(
+      () => setSelected((current) => (current + 1) % steps.length),
+      1700,
+    );
+    return () => window.clearInterval(timer);
+  }, [autoFlow, reduced, running, steps.length]);
+  useEffect(() => {
+    if (!running) return;
+    setAutoFlow(false);
+    let cursor = 0;
+    let resetTimer: number | undefined;
+    const timer = window.setInterval(() => {
+      setSelected(cursor);
+      cursor += 1;
+      if (cursor >= steps.length) {
+        window.clearInterval(timer);
+        resetTimer = window.setTimeout(() => {
+          setSelected(0);
+          setRunning(false);
+          setAutoFlow(!reduced);
+        }, 1500);
+      }
+    }, 1200);
+    return () => {
+      window.clearInterval(timer);
+      if (resetTimer) window.clearTimeout(resetTimer);
+    };
+  }, [running, reduced, steps]);
+  useEffect(() => {
+    if (!running)
+      window.history.replaceState(null, "", `#${caseId}/step-${selected + 1}`);
+  }, [caseId, selected, running]);
+  const select = (index: number) => {
+    setAutoFlow(false);
+    setSelected(Math.max(0, Math.min(index, steps.length - 1)));
+    window.history.replaceState(null, "", `#${caseId}/step-${index + 1}`);
+  };
+  const onKey = (event: React.KeyboardEvent) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      select(selected);
+    }
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      event.preventDefault();
+      select((selected + 1) % steps.length);
+    }
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      event.preventDefault();
+      select((selected - 1 + steps.length) % steps.length);
+    }
+  };
+  const copy = async () => {
+    await navigator.clipboard?.writeText(steps[selected].snippet ?? "");
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1200);
+  };
+  return (
+    <div className={autoFlow ? "flow auto-flow" : "flow manual-flow"}>
+      <div className="flow-top">
+        <div className="flow-controls">
+          <button
+            onClick={() => setAutoFlow(!autoFlow)}
+            aria-pressed={autoFlow}
+          >
+            {autoFlow ? "auto-flow on" : "auto-flow"}
+          </button>
+          <button onClick={() => setRunning(!running)}>
+            {running ? <Square size={13} /> : <Play size={13} />}{" "}
+            {running ? "Pause" : "Run flow"}
+          </button>
+          <button
+            onClick={() => {
+              setRunning(false);
+              setSelected(0);
+              setAutoFlow(!reduced);
+            }}
+          >
+            <RotateCcw size={13} /> Reset
+          </button>
+        </div>
+      </div>
+      <div
+        className="stepper"
+        role="tablist"
+        tabIndex={0}
+        aria-label={`${caseId} flow`}
+        onKeyDown={onKey}
+      >
+        {steps.map((item, index) => (
+          <button
+            ref={index === selected ? stepRef : undefined}
+            role="tab"
+            aria-selected={index === selected}
+            className={
+              index === selected
+                ? "flow-step selected"
+                : index < selected
+                  ? "flow-step passed"
+                  : "flow-step"
+            }
+            key={item.id}
+            onClick={() => select(index)}
+          >
+            <span className="flow-step-number">{index + 1}</span>
+            <span className="flow-step-copy">
+              <strong>{item.label}</strong>
+            </span>
+          </button>
+        ))}
+      </div>
+      <StepDetail step={steps[selected]} onCopy={copy} />
+      {copied ? (
+        <span className="copy-status">
+          <Check size={13} /> copied
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function CaseDetail({
+  item,
+  onTool,
+}: {
+  item: CaseStudy;
+  onTool: (tool: string) => void;
+}) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="case-detail">
+      <button
+        className="collapse-button"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        <span className="role-eyebrow">CASE {item.index} · {item.phase}</span>
+        <ChevronDown className={open ? "rotated" : ""} size={16} />
+      </button>
+      {open ? (
+        <>
+          <div className="detail-heading">
+            <div>
+              <h3 className="role-case-title">{item.title}</h3>
+              <CaseResult text={item.outcome} />
+            </div>
+          </div>
+          <div className="detail-metrics">
+            {item.metrics.map((metric) => (
+              <CountMetric
+                key={metric.detail}
+                value={metric.value}
+                detail={metric.detail}
+              />
+            ))}
+          </div>
+          <CaseFlow steps={item.steps} caseId={item.id} />
+          <div className="postmortem">
+            <h4>After Action Review</h4>
+            <div className="postmortem-grid">
+              <div>
+                <h5>Problem</h5>
+                <p
+                  className={
+                    item.problem.startsWith("[TODO") ? "needs-input" : ""
+                  }
+                >
+                  {item.problem}
+                </p>
+              </div>
+              <div>
+                <h5>Decision &amp; trade-offs</h5>
+                <p>{item.decision}</p>
+              </div>
+              <div>
+                <h5>Result</h5>
+                <p>{item.result}</p>
+              </div>
+              <div>
+                <h5>What I would improve next</h5>
+                <p className="needs-input">{item.improve}</p>
+              </div>
+            </div>
+          </div>
+          <div className="stack case-stack">
+            {item.stack.map((tool) => (
+              <button key={tool} onClick={() => onTool(tool)}>
+                {tool}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function CaseIndex({
+  openCase,
+  setOpenCase,
+  selectedTag,
+  setSelectedTag,
+}: {
+  openCase: string | null;
+  setOpenCase: (id: string | null) => void;
+  selectedTag: string;
+  setSelectedTag: (tag: string) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const filtered = content.cases.filter(
+    (item) =>
+      (selectedTag === "all" ||
+        (toolIndexedCases.includes(item) &&
+          (item.tags.includes(selectedTag as never) ||
+            caseMatchesTool(item, selectedTag)))) &&
+      `${item.title} ${item.company} ${item.stack.join(" ")}`
+        .toLowerCase()
+        .includes(search.toLowerCase()),
+  );
+  useEffect(() => {
+    const onSlash = (event: KeyboardEvent) => {
+      if (event.key === "/" && document.activeElement?.tagName !== "INPUT") {
+        event.preventDefault();
+        document.getElementById("case-search")?.focus();
+      }
+    };
+    window.addEventListener("keydown", onSlash);
+    return () => window.removeEventListener("keydown", onSlash);
+  }, []);
+  useEffect(() => {
+    if (!openCase) return;
+    const timer = window.setTimeout(() => {
+      document.getElementById(`case-${openCase}`)?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+        block: "start",
+      });
+    }, 40);
+    return () => window.clearTimeout(timer);
+  }, [openCase]);
+  return (
+    <section className="section-wrap cases-section" id="cases">
+      <div className="section-intro">
+        <SectionLabel index="01">ls -la ./cases</SectionLabel>
+        <h2>Case Studies</h2>
+        <p>
+          Filter the index, then open a case for its architecture, flow, and
+          postmortem. Every unknown stays marked for confirmation.
+        </p>
+      </div>
+      <div className="index-toolbar">
+        <FilterChips active={selectedTag} select={setSelectedTag} />
+        <label className="search-box">
+          <span>/</span>
+          <input
+            id="case-search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="filter cases"
+          />
+        </label>
+      </div>
+      {selectedTag !== "all" ? (
+        <div className="filter-banner">
+          Showing {filtered.length} {filtered.length === 1 ? "case" : "cases"}{" "}
+          using {selectedTag}
+          <button onClick={() => setSelectedTag("all")}>clear filter</button>
+        </div>
+      ) : null}
+      <div className="case-panel">
+        <div className="case-panel-header">
+          <span className="case-panel-dots">
+            <span />
+            <span />
+            <span />
+          </span>
+          <span className="case-panel-title">./cases</span>
+          <span className="case-panel-count">
+            {filtered.length} {filtered.length === 1 ? "case" : "cases"} ·{" "}
+            {allTags.length} tags
+          </span>
+        </div>
+        <div className="case-index-list">
+          {filtered.map((item) => (
+            <div
+              className={
+                openCase === item.id ? "case-row expanded" : "case-row"
+              }
+              id={`case-${item.id}`}
+              key={item.id}
+            >
+              <button
+                className="case-row-trigger"
+                aria-expanded={openCase === item.id}
+                onClick={() =>
+                  setOpenCase(openCase === item.id ? null : item.id)
+                }
+              >
+                <span className="permissions">drwxr-xr-x</span>
+                <span className="case-year">2026</span>
+                <span className="case-phase">{item.phase}</span>
+                <strong>{item.title}</strong>
+                <span className="case-summary">
+                  {item.metrics
+                    .slice(0, 2)
+                    .map((metric) => metric.value)
+                    .join(" · ")}{" "}
+                  →
+                </span>
+              </button>
+              {openCase === item.id ? (
+                <CaseDetail item={item} onTool={setSelectedTag} />
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function StackManifest({
+  selectedTag,
+  setSelectedTag,
+  onTool = (tool) => {
+    setSelectedTag?.(selectedTag === tool ? "all" : tool);
+    window.setTimeout(
+      () =>
+        document
+          .getElementById("cases")
+          ?.scrollIntoView({
+            behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
+              .matches
+              ? "auto"
+              : "smooth",
+            block: "start",
+          }),
+      0,
+    );
+  },
+  onExperience = (hash) => {
+    Array.from(
+      document.querySelectorAll<HTMLButtonElement>(".experience-trigger"),
+    )
+      .find((button) => button.textContent?.includes(hash))
+      ?.click();
+    window.setTimeout(
+      () =>
+        document
+          .getElementById("experience")
+          ?.scrollIntoView({
+            behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
+              .matches
+              ? "auto"
+              : "smooth",
+            block: "start",
+          }),
+      0,
+    );
+  },
+}: {
+  selectedTag: string;
+  setSelectedTag?: (tool: string) => void;
+  onTool?: (tool: string) => void;
+  onExperience?: (hash: string) => void;
+}) {
+  const counts = (tool: string) =>
+    toolIndexedCases.filter((item) => caseMatchesTool(item, tool)).length;
+  return (
+    <section className="section-wrap capabilities" id="capabilities">
+      <div className="section-intro">
+        <SectionLabel index="02">cat stack.yaml</SectionLabel>
+        <h2>Tools, indexed by use.</h2>
+        <p>
+          Click a tool to focus the relevant work. Tools without an indexed
+          entry route to the experience log.
+        </p>
+      </div>
+      <div className="manifest">
+        <div className="manifest-top">
+          <span>stack.yaml</span>
+          <span>
+            {selectedTag === "all" ? "all tools" : `filter: ${selectedTag}`}
+          </span>
+        </div>
+        {Object.entries(content.capabilities).map(([group, items]) => (
+          <div className="manifest-group" key={group}>
+            <span className="manifest-key">
+              {group.toLowerCase().replaceAll(" ", "_")}
+            </span>
+            <div>
+              {items.map((tool) => {
+                const count = counts(tool);
+                const experience = experienceForTool(tool);
+                return (
+                  <button
+                    className={
+                      selectedTag === tool ? "tool-chip selected" : "tool-chip"
+                    }
+                    key={tool}
+                    onClick={() =>
+                      count
+                        ? onTool(tool)
+                        : experience
+                          ? onExperience(experience.hash)
+                          : undefined
+                    }
+                  >
+                    {tool}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Experience({
+  open,
+  setOpen,
+}: {
+  open: string | null;
+  setOpen: (id: string | null) => void;
+}) {
+  return (
+    <section className="section-wrap experience-section" id="experience">
+      <div className="section-intro">
+        <SectionLabel index="03">git log --oneline</SectionLabel>
+        <h2>Experience</h2>
+      </div>
+      <div className="experience-list">
+        {content.experience.map((item) => (
+          <article className="experience-item" key={item.hash}>
+            <button
+              className="experience-trigger"
+              aria-expanded={open === item.hash}
+              onClick={() => setOpen(open === item.hash ? null : item.hash)}
+            >
+              <span className="hash">{item.hash}</span>
+              <span>{item.dates}</span>
+              <strong>{item.company}</strong>
+              <span>{item.role}</span>
+              <ChevronDown
+                className={open === item.hash ? "rotated" : ""}
+                size={15}
+              />
+            </button>
+            {open === item.hash ? (
+              <div className="experience-detail">
+                <ul>
+                  {item.bullets.map((bullet) => (
+                    <li key={bullet}>{bullet}</li>
+                  ))}
+                </ul>
+                <div className="stack">
+                  {item.stack.map((tool) => (
+                    <span key={tool}>{tool}</span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CommandPalette({
+  open,
+  close,
+  setCase,
+  toggleTheme,
+}: {
+  open: boolean;
+  close: () => void;
+  setCase: (id: string) => void;
+  toggleTheme: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [history, setHistory] = useState<string[]>([]);
+  const [mode, setMode] = useState<"yaml" | "json" | "plain">("yaml");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const commands = [
+    "whoami",
+    "ls cases",
+    ...content.cases.map((item) => `open ${item.id}`),
+    "cat resume.yaml",
+    "stack",
+    "log",
+    "contact",
+    "theme",
+    "help",
+    "clear",
+  ];
+  const filtered = commands.filter((command) =>
+    command.includes(query.toLowerCase()),
+  );
+  useEffect(() => {
+    if (!open) {
+      setQuery("");
+      return;
+    }
+    inputRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Enter" && filtered[0]) {
+        const command = filtered[0];
+        setHistory((items) => [command, ...items].slice(0, 5));
+        if (command === "clear") setHistory([]);
+        if (command === "theme") toggleTheme();
+        if (command === "contact")
+          document
+            .getElementById("contact")
+            ?.scrollIntoView({ behavior: "smooth" });
+        if (command === "stack")
+          document
+            .getElementById("capabilities")
+            ?.scrollIntoView({ behavior: "smooth" });
+        if (command === "log")
+          document
+            .getElementById("experience")
+            ?.scrollIntoView({ behavior: "smooth" });
+        if (command === "ls cases")
+          document
+            .getElementById("cases")
+            ?.scrollIntoView({ behavior: "smooth" });
+        if (command.startsWith("open")) {
+          const target = content.cases.find(
+            (item) => command === `open ${item.id}`,
+          );
+          if (target) setCase(target.id);
+        }
+        close();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [close, filtered, open, setCase, toggleTheme]);
+  if (!open) return null;
+  const yaml = `name: ${content.name}\nrole: ${content.role}\nlocation: ${content.location}\nopen_to_relocation: true`;
+  const output =
+    mode === "yaml"
+      ? yaml
+      : mode === "json"
+        ? JSON.stringify(
+            {
+              name: content.name,
+              role: content.role,
+              location: content.location,
+            },
+            null,
+            2,
+          )
+        : `${content.name}\n${content.role}\n${content.location}`;
+  return (
+    <div className="console-backdrop">
+      <div
+        className="console"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Operations console"
+      >
+        <div className="console-input">
+          <span>lakshmi@ops:~$</span>
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="type a command..."
+            aria-label="Command input"
+          />
+        </div>
+        <div className="command-list">
+          {filtered.map((command, index) => (
+            <button
+              className={index === 0 ? "command active" : "command"}
+              key={command}
+              onClick={() => {
+                setQuery(command);
+              }}
+            >
+              <span>{command}</span>
+              <small>{index === 0 ? "press enter to run" : ""}</small>
+              <kbd>{index === 0 ? "ENTER" : ""}</kbd>
+            </button>
+          ))}
+        </div>
+        {history.length ? (
+          <div className="history">
+            <span>history</span>
+            {history.map((item) => (
+              <code key={item}>{item}</code>
+            ))}
+          </div>
+        ) : null}
+        <div className="console-resume">
+          <div className="mode-tabs">
+            {(["yaml", "json", "plain"] as const).map((item) => (
+              <button
+                className={mode === item ? "selected" : ""}
+                key={item}
+                onClick={() => setMode(item)}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+          <pre>{output}</pre>
+        </div>
+        <p className="console-hint">
+          ESC close · ? shortcuts · history retained this session
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function Education() {
+  return (
+    <section className="section-wrap education-section" id="education">
+      <div className="section-intro">
+        <SectionLabel index="04">cat education.yaml</SectionLabel>
+        <h2>Education.</h2>
+      </div>
+      <div className="education-grid">
+        {content.education.map((item) => (
+          <article className="education-card" key={item.school}>
+            <span className="education-badge">{item.dates}</span>
+            <h3>{item.degree}</h3>
+            <p>{item.school}</p>
+            <small>{item.location}</small>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Contact() {
+  return (
+    <section className="contact section-wrap" id="contact">
+      <SectionLabel index="05">contact</SectionLabel>
+      <h2>Build the next reliable thing.</h2>
+      <p>
+        Seeking DevOps, Cloud, and Platform Engineer roles where automation,
+        delivery, and operational clarity matter.
+      </p>
+      <div className="contact-links">
+        <a href={`mailto:${content.email}`}>
+          <Mail size={16} /> {content.email}
+        </a>
+        <a href={content.linkedin} target="_blank" rel="noreferrer">
+          in / LinkedIn
+        </a>
+        <a href={content.github} target="_blank" rel="noreferrer">
+          gh / GitHub
+        </a>
+      </div>
+      <span className="relocation">open_to_relocation: true</span>
+    </section>
+  );
+}
 
 function App() {
-  const ids = navigation.map((item) => item.id);
-  const activeSection = useActiveSection(ids);
-  useLanguage();
-  const intro = useIntroLoader();
-
-  const personSchema = JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "Person",
-    name: profile.name,
-    url: profile.siteUrl,
-    jobTitle: "DevOps, Cloud & Systems Engineer",
-    sameAs: [profile.githubUrl, profile.linkedinUrl],
-    knowsAbout: [
-      "Microsoft Azure",
-      "DevOps",
-      "Cloud Engineering",
-      "Systems Engineering",
-      "Terraform",
-      "CI/CD",
-      "Docker",
-      "Kubernetes",
-      "PowerShell",
-      "Linux",
-      "Windows Server",
-    ],
-  });
-
+  const [openCase, setOpenCase] = useState<string | null>(null);
+  const [selectedTag, setSelectedTag] = useState("all");
+  const [openExperience, setOpenExperience] = useState<string | null>(null);
+  const [consoleOpen, setConsoleOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem("portfolio-theme") ?? "system",
+  );
+  const [promptText, setPromptText] = useState("");
+  const [heroReady, setHeroReady] = useState(false);
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    localStorage.setItem("portfolio-theme", next);
+    document.documentElement.dataset.theme = next;
+  };
+  useEffect(() => {
+    if (theme !== "system") document.documentElement.dataset.theme = theme;
+  }, [theme]);
+  useEffect(() => {
+    const prompt = "lakshmipriya@ops:~$ whoami";
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setPromptText(prompt);
+      setHeroReady(true);
+      return;
+    }
+    let index = 0;
+    const timer = window.setInterval(() => {
+      setPromptText(prompt.slice(0, index + 1));
+      index += 1;
+      if (index === prompt.length) {
+        window.clearInterval(timer);
+        window.setTimeout(() => setHeroReady(true), 160);
+      }
+    }, 45);
+    return () => window.clearInterval(timer);
+  }, []);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setConsoleOpen(true);
+      }
+      if (event.key === "Escape") setConsoleOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+  const selectCase = (id: string) => {
+    setOpenCase(id);
+  };
   return (
-    <LazyMotion features={domAnimation}>
-      {intro.isVisible ? (
-        <PortfolioPreloader
-          progress={intro.progress}
-          stageIndex={intro.stageIndex}
-          onSkip={intro.skip}
+    <>
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
+      <header className="site-header">
+        <a className="wordmark" href="#hero">
+          ops://<span>LP</span>
+        </a>
+        <nav className={menuOpen ? "nav open" : "nav"}>
+          {["cases", "capabilities", "experience", "education", "contact"].map(
+            (item) => (
+              <a
+                key={item}
+                href={`#${item}`}
+                onClick={() => setMenuOpen(false)}
+              >
+                {item}
+              </a>
+            ),
+          )}
+        </nav>
+        <div className="header-actions">
+          <button
+            className="theme-button"
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
+          >
+            {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
+          <button
+            className="console-trigger"
+            onClick={() => setConsoleOpen(true)}
+          >
+            <Command size={14} /> Console <kbd>⌘K</kbd>
+          </button>
+          <button
+            className="menu-trigger"
+            aria-label="Toggle navigation"
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
+            {menuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
+      </header>
+      <main id="main-content">
+        <section className="hero section-wrap" id="hero">
+          <div className="prompt-line">
+            <span>{promptText}</span>
+            <i />
+          </div>
+          <p className="whoami-name"></p>
+          <div className={heroReady ? "hero-copy revealed" : "hero-copy"}>
+            <SectionLabel index="00">DevOps / Cloud / Reliability</SectionLabel>
+            <h1 className="role-hero-h1">
+              Infrastructure
+              <br />
+              that ships itself.
+            </h1>
+            <p className="hero-value">
+              DevOps Engineer who turns multi-day manual operations into
+              minutes-long, auditable automation across Azure, AWS, and
+              Kubernetes.
+            </p>
+            <div className="hero-actions">
+              <a className="button button-primary" href="#cases">
+                ls cases <ArrowUpRight size={15} />
+              </a>
+              <a
+                className="button button-secondary"
+                href={`${base}resume.pdf`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <Download size={15} /> wget resume.pdf
+              </a>
+              <button
+                className="text-button"
+                onClick={() => setConsoleOpen(true)}
+              >
+                open console <span>⌘K</span>
+              </button>
+            </div>
+            <div className="status-json">
+              <span>{"{"}</span>
+              <p>
+                "status": <b>"open to work"</b>,
+              </p>
+              <p>
+                "seeking": <b>"DevOps / Cloud / Platform Engineer roles"</b>,
+              </p>
+              <p>
+                "region": <b>"{content.location} / open to relocation"</b>
+              </p>
+              <span>{"}"}</span>
+            </div>
+          </div>
+          <HeroPipelineCard onOpenCase={(step) => {
+            setOpenCase("vm-provisioning");
+            window.history.replaceState(null, "", `#vm-provisioning/step-${step + 1}`);
+          }} />
+        </section>
+        <CaseIndex
+          openCase={openCase}
+          setOpenCase={setOpenCase}
+          selectedTag={selectedTag}
+          setSelectedTag={setSelectedTag}
         />
-      ) : null}
-      <m.div
-        initial={false}
-        animate={intro.isReady ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
-        transition={{ duration: 0.26, ease: "easeOut" }}
-        data-app-shell
-        aria-hidden={intro.isVisible && !intro.isReady ? "true" : undefined}
-        inert={intro.isVisible && !intro.isReady}
-        className={
-          intro.isVisible && !intro.isReady ? "pointer-events-none" : ""
-        }
-      >
-        <SkipLink />
-        <ScrollProgress />
-        <Header activeSection={activeSection} />
-        <m.main id="main-content" aria-busy={intro.isVisible}>
-          <HeroSection />
-          <AboutSection />
-          <ProjectsSection />
-          <ExpertiseSection />
-          <ExperienceSection />
-          <QualificationsSection />
-          <ContactSection />
-        </m.main>
-        <Footer />
-      </m.div>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: personSchema }}
+        <StackManifest
+          selectedTag={selectedTag}
+          setSelectedTag={setSelectedTag}
+        />
+        <Experience open={openExperience} setOpen={setOpenExperience} />
+        <Education />
+        <Contact />
+      </main>
+      <footer className="status-bar">
+        <span>
+          <i /> status: open to work
+        </span>
+        <span>region: {content.location}</span>
+        <span>open to relocation</span>
+        <span>last deploy: {buildTime}</span>
+      </footer>
+      <CommandPalette
+        open={consoleOpen}
+        close={() => setConsoleOpen(false)}
+        setCase={selectCase}
+        toggleTheme={toggleTheme}
       />
-    </LazyMotion>
+    </>
   );
 }
 
