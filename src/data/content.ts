@@ -2,17 +2,18 @@ export type DiagramKind = "provisioning" | "fleet" | "drift" | "synthetic" | "pl
 export type CaseTag = "provisioning" | "fleet" | "reliability" | "observability" | "gitops" | "cost";
 
 export interface Metric { value: string; detail: string; caseId?: string; }
-export interface FlowStep { id: string; label: string; tool: string[]; summary: string; bullets: string[]; snippet?: string; outcome?: string; }
+export interface FlowStep { id: string; label: string; tool: string[]; summary: string; }
 export interface PipelineLog { time: string; message: string; }
 export interface CaseStudy {
   id: string; index: string; title: string; company: string; phase: string; tags: CaseTag[]; outcome: string;
   stack: string[]; diagram: DiagramKind; metrics: Metric[]; steps: FlowStep[];
-  problem: string; decision: string; result: string; improve: string;
+  problem: string; result: string;
+  impact?: string;
 }
 export interface ExperienceItem { hash: string; company: string; role: string; dates: string; bullets: string[]; stack: string[]; }
 export interface EducationItem { school: string; degree: string; location: string; dates: string; }
 
-const step = (id: string, label: string, tool: string[], summary: string, bullets: string[], snippet: string, outcome?: string): FlowStep => ({ id, label, tool, summary, bullets, snippet, outcome });
+const step = (id: string, label: string, tool: string[], summary: string): FlowStep => ({ id, label, tool, summary });
 
 export const content = {
   name: "Lakshmipriya RajeshKanna",
@@ -27,22 +28,57 @@ export const content = {
     id: "vm-provisioning", index: "01", title: "Zero-touch VM provisioning", company: "AssetWorks / Hosting", phase: "provisioning", tags: ["provisioning", "reliability"], outcome: "7 days to approximately 14 minutes", diagram: "provisioning",
     stack: ["ManageIQ", "Automated Embedded Ansible", "vSphere", "VMware ESXi", "Windows Server", "IP allocation", "DNS", "OpUtils", "OPManager Central", "WinRM"],
     metrics: [
-    { value: "15+", detail: "VMs provisioned" },
-    { value: "6", detail: "workflow stages automated" },
-    { value: "8", detail: "infrastructure integrations" }
+    { value: "~14 min", detail: "target" },
+    { value: "7+", detail: "steps automated" },
+    { value: "15+", detail: "VMs provisioned" }
     ],
-    steps: [
-        step("request", "request", ["ManageIQ", "Hosted Environment Navigator(Internal Tool)"], "- A VM request is submitted through the Hosted Environment Navigator dashboard and routed to the ManageIQ catalog workflow. The request starts the automated provisioning process.", ["- Captures the server name, customer name, and target environment (PROD or TEST).", "- Validates credentials, resource availability, and provisioning requirements before proceeding."], "request: vm\nsource: manageiq", "Request validated and workflow triggered."),
-        step("placement", "ESXi host placement", ["ManageIQ", "vSphere", "VMware ESXi", "Automated Embedded Ansible"], "- The workflow evaluates available VMware ESXi hosts in vSphere and selects the best fit for the Windows VM requirements.", ["- Checks CPU, memory, storage, and required subnet availability.", "- If no suitable ESXi host is found, provisioning stops, rolls back, and returns an error."], "placement:\n  provider: vsphere\n  host_type: esxi", "Best-fit ESXi host selected."),
-        step("network", "IP / DNS allocation", ["OpUtils", "OPManagerCentral"], "- The workflow checks Oputils (OpManager Central) for an available IP and reserves one from the required subnet.", ["- Holds the IP for the VM throughout the provisioning process.", "- Passes the reserved address to the VM and DNS configuration stages."], "network:\n  ip: allocate\n  dns: register", "IP reserved for provisioning."),
-        step("configure", "Windows VM configuration", ["Ansible Playbooks", "WinRM", "Windows Server", "vSphere"], "- A Windows Server VM is created on the selected ESXi host using the required golden template or requested specifications.", ["- Establishes WinRM access and applies the required Windows configuration through Ansible.", "- Applies required Windows settings, including HTTPS-related configuration."], "ansible-playbook configure-windows-vm.yml", "Windows VM created and configured."),
-        step("environment", "environment setup", ["OPManagerCentral", "ManageIQ"], "- The workflow configures the server's domain and establishes the correct relationship between the hostname, IP address, and DNS.", ["- Creates and validates forward and reverse DNS resolution.", "- Updates Oputils to reflect the assigned IP as in use."], "environment: PROD", "Domain and DNS mapping completed."),
-        step("ready", "ready VM", ["ManageIQ"], "- The completed VM is surfaced in the ManageIQ virtual machine inventory for final verification.", ["- Confirms the VM is present with the expected configuration and network identity.", "- Provides a ready state for use or handoff."], "status: ready", "VM ready for use."),
-    ],
+steps: [
+  step(
+    "Request",
+    "Request",
+    ["ManageIQ", "Hosted Environment Navigator (Internal Tool)"],
+    "An engineer submits a VM request through the Hosted Environment Navigator, providing the required environment and server details. The request is then passed to ManageIQ, which starts the provisioning workflow without requiring manual coordination across teams."
+  ),
+
+  step(
+    "placement",
+    "ESXi host placement",
+    ["ManageIQ", "vSphere", "VMware ESXi", "Automated Embedded Ansible"],
+    "The workflow evaluates the available VMware infrastructure and selects an appropriate ESXi host based on available capacity and placement requirements. This removes the need for an engineer to manually identify where the VM should be created."
+  ),
+
+  step(
+    "network",
+    "IP / DNS allocation",
+    ["OpUtils", "OPManagerCentral"],
+    "An available IP address is reserved and the required DNS record is created for the new VM. Automating this step ensures the server receives the correct network identity as part of provisioning instead of relying on separate manual requests."
+  ),
+
+  step(
+    "configure",
+    "Windows VM configuration",
+    ["Ansible Playbooks", "WinRM", "Windows Server", "vSphere"],
+    "The VM is created from the appropriate template and Ansible connects to the Windows server through WinRM to apply the required configuration. Standardized playbooks handle the repeatable setup so every provisioned VM starts from the same baseline."
+  ),
+
+  step(
+    "environment",
+    "Environment setup",
+    ["OPManagerCentral", "ManageIQ"],
+    "The newly created VM is connected to its target environment by applying domain and DNS configuration and updating the relevant infrastructure records. This prepares the server for the services and operational workflows that depend on it."
+  ),
+
+  step(
+    "ready",
+    "Ready VM",
+    ["ManageIQ"],
+    "Once provisioning and configuration complete successfully, the VM is registered in the operational inventory and becomes available for handoff. The workflow provides a clear end state instead of requiring an engineer to manually verify each system."
+  ),
+],
     problem: "Provisioning depended on multiple system handoffs and manual coordination, making server delivery slow and difficult to standardize.",
-    decision: "Orchestrated the provisioning lifecycle through ManageIQ with Ansible handling server configuration and environment-specific automation.",
     result: "Reduced provisioning time from 7 days to approximately 14 minutes, with 7+ steps automated and 15+ VMs provisioned.",
-    improve: "Add stronger failure recovery and resource cleanup for partial provisioning failures, and extend the automation to support for new product environments.",
+    impact: "Engineers stopped being the bottleneck for customer environment delivery.",
+next: "Expand the provisioning workflow with additional products and VM templates, allowing the platform to automatically select the right template and configuration based on different customer requirements."
     },
     {
     id: "environment-navigator",
@@ -71,97 +107,63 @@ export const content = {
         { value: "337+", detail: "FA-EAM servers" },
         { value: "116+", detail: "M5 servers" }
     ],
-    steps: [
-    step(
+steps: [
+  step(
     "inventory",
     "server inventory",
     ["Python", "Flask", "PostgreSQL"],
-    "- The dashboard provides a centralized view of the complete hosted server fleet.",
-    [
-        "- Server and environment information is available from one place.",
-        "- Operators can inspect individual servers and their environments without switching systems."
-    ],
-    "fleet:\n  servers: 453+",
-    "A centralized fleet inventory gives operators one reliable starting point for understanding the hosted environment."
-    ),
+    "Provides a centralized view of 453+ Windows servers supporting FA-EAM and M5, giving the team a shared view of hosted environments and server information."
+  ),
 
-    step(
+  step(
+    "connectivity",
+    "server connectivity",
+    ["WinRM", "Python", "Windows"],
+    "Supports connectivity to Windows servers through the platform's existing backend and connectivity layer, enabling operators to work with hosted environments from a central interface."
+  ),
+
+  step(
     "operations",
-    "server operations",
-    ["PostgreSQL", "Ansible", "Celery"],
-    "Server software, updates, SSL certificates, configuration, and operational details are surfaced through the same interface.",
-    [
-        "- Operators can review the state and details of individual servers.",
-        "- Software, update, certificate, and configuration information stays tied to the relevant environment."
-    ],
-    "operations:\n  software: tracked\n  updates: tracked\n  ssl: tracked",
-    "A complete server-level operational view makes day-to-day maintenance and troubleshooting easier to manage."
-    ),
+    "operational workflows",
+    ["Flask", "Ansible", "Celery"],
+    "Brings existing operational workflows such as configuration management and server operations into the Navigator, reducing the need to work across disconnected tools."
+  ),
 
-    step(
-    "manageiq",
-    "ManageIQ workspace",
-    ["ManageIQ", "Flask"],
-    "- The dashboard provides the entry point and UI for triggering and accessing ManageIQ workflows.",
-    [
-        "- Operators can launch ManageIQ functionality from the central dashboard.",
-        "- ManageIQ becomes part of the same operational workflow instead of requiring a separate starting point."
-    ],
-    "integration:\n  manageiq: connected",
-    "ManageIQ is brought into the central workflow while retaining its specialized environment-management capabilities."
-    ),
+  step(
+    "m5",
+    "M5 product workflows",
+    ["Flask", "PostgreSQL", "Ansible"],
+    "Contributed to adding new M5 product workflows and integrating them with the platform's existing backend, connectivity, and operational patterns."
+  ),
 
-    step(
-    "drift",
-    "configuration drift",
-    ["Ansible", "Flask"],
-    "- Configuration-drift information is surfaced through the same operational hub.",
-    [
-        "- Operators can access the configuration-drift dashboard from the main interface.",
-        "- Drift information can be reviewed in the context of the affected server or environment."
-    ],
-    "config:\n  drift: available",
-    "Configuration drift becomes part of the same server-management workflow rather than a disconnected operational task."
-    ),
+  step(
+    "provisioning",
+    "provisioning integration",
+    ["ManageIQ", "Ansible", "Flask"],
+    "Worked on connecting provisioning and configuration-management workflows to the Navigator so M5-related infrastructure actions could follow the platform's existing operational flow."
+  ),
 
-    step(
+  step(
     "access",
     "centralized access",
-    ["RBAC", "NGINX"],
-    "- RBAC and the application layer provide a controlled entry point into the connected operational tools.",
-    [
-        "- Operators start from one dashboard.",
-        "- Access to connected tools and operational information is managed through the central application."
-    ],
-    "role: operator\naccess: centralized",
-    "A controlled access layer gives operators a consistent and secure entry point to the hosting toolset."
-    ),
+    ["RBAC", "NGINX", "Flask"],
+    "Provides a consistent entry point for the team to access server information and connected operational workflows through the existing platform."
+  ),
 
-    step(
+  step(
     "hub",
     "operations hub",
-    ["Flask", "PostgreSQL"],
-    "- The dashboard acts as the head of the hosting toolset, connecting smaller operational workflows into one experience.",
-    [
-        "- Server inventory, ManageIQ, configuration drift, certificates, updates, and other tools are brought together.",
-        "- Operators have a single starting point for day-to-day hosting operations.",
-        "- The dashboard reduces the need to remember which tool owns each individual workflow."
-    ],
-    "hub:\n  tools: connected\n  fleet: 453+",
-    "One central operations hub connecting the hosting team's smaller tools and workflows."
-    )],
-problem:
-    "Server information and operational workflows were spread across multiple dashboards, requiring operators to switch between tools to manage the fleet.",
+    ["Python", "Flask", "PostgreSQL", "Redis", "Celery"],
+    "Brings fleet visibility, connectivity, and operational workflows together in one internal platform, with contributions extending its support for M5 environments."
+  ),
+],
+problem: "Operators needed centralized connectivity and operational visibility across 453+ Windows servers supporting FA-EAM and M5, while new M5 workflows had to integrate with the platform's existing backend and connectivity layer.",
 
-decision:
-    "Built the Hosted Environment Navigator as a central operational layer combining server details, SSL certificates, software, updates, ManageIQ, and configuration-drift workflows.",
+result: "Worked with the team lead to extend the Hosted Environment Navigator with M5 product workflows, integrating provisioning and configuration-management capabilities into the existing platform.",
 
-result:
-    "Created a single operational hub for 453+ servers, bringing key hosting workflows into one experience while keeping specialized systems connected.",
+impact: "Expanded the platform's operational coverage while keeping new product workflows connected to the same centralized infrastructure and connectivity layer.",
 
-improve:
-    "Deepen integration across the remaining workflows so data, navigation, and actions can flow seamlessly between systems."
-},
+next: "Expand M5 workflows and automate more provisioning paths"},
 {
   id: "config-drift",
   index: "03",
@@ -186,101 +188,59 @@ improve:
     { value: "64", detail: "shared tenants" }
   ],
 
-  steps: [
-    step(
-      "fleet",
-      "production fleet",
-      ["Python"],
-      "- The drift detection workflow starts with the production Windows fleet and the configurations shared across customer environments.",
-      [
-        "- The scope covers 13 production servers.",
-        "- Multiple tenants can share the same underlying server infrastructure.",
-        "- The workflow needs to distinguish expected customer-specific differences from unexpected configuration changes."
-      ],
-      "servers: 13\nmodel: shared + tenant-specific",
-      "A defined fleet scope establishes the baseline for consistent configuration monitoring."
-    ),
+steps: [
+  step(
+    "schedule",
+    "scheduled drift checks",
+    ["Celery", "Python"],
+    "Runs configuration-drift checks on a 15-minute cycle so Windows environments are monitored continuously instead of relying on manual audits."
+  ),
 
-    step(
-      "collect",
-      "remote collection",
-      ["WinRM", "PowerShell"],
-      "- The system remotely collects the current configuration state from each production server.",
-      [
-        "- WinRM provides remote access to the Windows servers.",
-        "- PowerShell is used to inspect and collect configuration state.",
-        "- The collection process runs automatically instead of requiring an operator to inspect servers individually."
-      ],
-      "winrm collect --all",
-      "Automated remote collection turns server configuration into repeatable, comparable data."
-    ),
+  step(
+    "fanout",
+    "parallel server checks",
+    ["Celery", "Python", "WinRM"],
+    "Uses a Celery fan-out approach to distribute configuration checks across 13 production servers, allowing multiple servers to be checked in parallel."
+  ),
 
-    step(
-      "normalize",
-      "hash + parse",
-      ["Python", "PowerShell"],
-      "- Collected configuration files are parsed and normalized so their state can be compared consistently.",
-      [
-        "- The workflow covers 144+ configuration files.",
-        "- File contents are hashed to identify meaningful changes.",
-        "- Normalization helps separate expected formatting or representation differences from actual configuration changes."
-      ],
-      "files: 144+\nmode: hash + parse",
-      "Normalized configuration state creates a consistent basis for detecting changes across servers."
-    ),
+  step(
+    "collect",
+    "configuration collection",
+    ["WinRM", "PowerShell", "Windows"],
+    "Connects to each Windows server and collects the current state of 144+ configuration files for comparison against the expected configuration."
+  ),
 
-    step(
-      "compare",
-      "configuration comparison",
-      ["Python", "PostgreSQL"],
-      "- Current configuration state is compared against the expected or previously known state.",
-      [
-        "- Configuration changes are evaluated automatically.",
-        "- Comparison results are persisted for visibility and historical tracking.",
-        "- The workflow runs on a 15-minute schedule."
-      ],
-      "schedule: */15 * * * *\ncompare: current vs expected",
-      "A repeatable comparison loop identifies configuration changes without waiting for a manual audit."
-    ),
+  step(
+    "tenant",
+    "shared-server handling",
+    ["Python", "PowerShell"],
+    "Accounts for multiple customers sharing the same server so configuration checks can distinguish customer-specific requirements while evaluating the shared environment."
+  ),
 
-    step(
-      "surface",
-      "drift visibility",
-      ["Celery", "PostgreSQL"],
-      "- Detected differences are processed and surfaced so operators can identify which servers, files, and tenants require attention.",
-      [
-        "- The workflow covers 64 shared tenants.",
-        "- Background processing supports repeated fleet-wide checks.",
-        "- Stored results provide an operational record of detected drift."
-      ],
-      "drift: detected\nstatus: persisted",
-      "Configuration drift becomes visible as an actionable operational signal instead of a manual discovery exercise."
-    ),
+  step(
+    "compare",
+    "drift detection",
+    ["Python", "Ansible"],
+    "Processes the collected configuration state and identifies differences from the expected configuration, making unexpected changes easier to detect."
+  ),
 
-    step(
-      "act",
-      "operations workflow",
-      ["PostgreSQL", "Flask"],
-      "- Drift results feed back into the central hosting operations workflow for investigation and remediation.",
-      [
-        "- Operators can identify the affected server and configuration.",
-        "- Drift can be investigated alongside the other server details in the operations dashboard.",
-        "- The detection workflow provides the signal while remediation remains an explicit operational action."
-      ],
-      "workflow:\n  detect -> investigate -> remediate",
-      "Drift detection closes the loop between automated monitoring and day-to-day server operations."
-    )
-  ],
-problem:
-  "Manual configuration audits made it difficult to reliably spot unexpected changes across the production fleet.",
+  step(
+    "fanin",
+    "results aggregation",
+    ["Celery", "PostgreSQL"],
+    "Uses a fan-in stage to collect results from the distributed checks and make the combined status available for the operational workflow."
+  ),
 
-decision:
-  "Automated remote collection, normalization, hashing, and comparison of configuration state on a 15-minute cycle.",
-
-result:
-  "Created a continuous drift-detection loop that gives operators a persistent, actionable view of configuration changes.",
-  improve:
-   "Connect drift results to the operations hub with ownership, severity, context, remediation status, and affected-server workflows.",
+  step(
+    "dashboard",
+    "drift visibility",
+    ["Flask", "PostgreSQL"],
+    "Improved how configuration differences and check results were surfaced in the Navigator, giving operators a clearer view of drift across Windows environments."
+  ),
+],
+problem: "Manual configuration audits made it difficult to reliably spot unexpected changes across the production fleet.",
+result: "Created a continuous drift-detection loop that gives operators a persistent, actionable view of configuration changes.",
+impact: "Reduced the effort required to monitor shared customer environments and helped surface configuration issues before they became harder-to-trace operational problems."
 },
 {
   id: "synthetic-testing",
@@ -307,88 +267,58 @@ result:
     { value: "YAML", detail: "self-service onboarding" }
   ],
 
-  steps: [
-    step(
-      "config",
-      "customer configuration",
-      ["YAML", "Azure DevOps"],
-      "- Each customer environment is represented through configuration-driven YAML rather than hard-coded test definitions.",
-      [
-        "- Customer-specific URLs, environments, checks, and test parameters are defined through configuration.",
-        "- The same test framework can be reused across different customer environments.",
-        "- New customers can be added without creating a separate test implementation."
-      ],
-      "customer: example\nchecks: enabled\nenvironment: production",
-      "Configuration-driven onboarding makes customer coverage repeatable and scalable."
-    ),
+steps: [
+  step(
+    "config",
+    "customer configuration",
+    ["YAML", "Azure DevOps"],
+    "Each customer environment is represented through configuration-driven YAML, defining the application and checks that need to be validated."
+  ),
 
-    step(
-      "pipeline",
-      "test pipeline",
-      ["Azure DevOps", "YAML"],
-      "- Azure DevOps turns the customer configuration into an executable validation pipeline.",
-      [
-        "- The pipeline validates the customer configuration before execution.",
-        "- Customer-specific YAML is generated or consumed as part of the pipeline flow.",
-        "- Validation and test stages provide a repeatable execution path."
-      ],
-      "stages:\n  - validate\n  - generate\n  - test",
-      "A standardized pipeline removes customer-by-customer manual test setup."
-    ),
+  step(
+    "onboarding",
+    "self-service onboarding",
+    ["Azure DevOps", "YAML"],
+    "A self-service workflow generates the customer-specific YAML configuration and testing pipeline, removing the need to manually create a separate sanity-testing pipeline for each customer."
+  ),
 
-    step(
-      "secrets",
-      "secure credentials",
-      ["Azure Key Vault"],
-      "- Credentials and sensitive test values are retrieved securely during test execution.",
-      [
-        "- Azure Key Vault stores the secrets required by the test framework.",
-        "- Customer configuration references secrets rather than embedding credentials.",
-        "- The same secure pattern can be reused across customer environments."
-      ],
-      "secret:\n  source: key-vault\n  reference: customer-ref",
-      "Secure secret handling keeps production validation automated without exposing customer credentials in test configuration."
-    ),
+  step(
+    "secrets",
+    "secure credentials",
+    ["Azure Key Vault"],
+    "Retrieves application credentials securely from Azure Key Vault during test execution rather than storing sensitive values in customer-specific pipeline configuration."
+  ),
 
-    step(
-      "checks",
-      "synthetic validation",
-      ["C#", "Playwright"],
-      "- Playwright-based synthetic checks exercise real customer-facing workflows against production environments.",
-      [
-        "- Checks validate access, authentication, connectivity, and customer-specific application signals.",
-        "- Tests execute on a recurring 5–10 minute cadence.",
-        "- The framework supports the same validation model across 169+ customer environments."
-      ],
-      "dotnet test --filter synthetic\nschedule: 5-10m",
-      "Synthetic checks continuously exercise critical customer paths instead of relying only on post-change manual validation."
-    ),
+  step(
+    "application",
+    "application validation",
+    ["C#", "Playwright"],
+    "Runs automated post-maintenance sanity checks against customer applications to verify that critical application workflows remain available."
+  ),
 
-    step(
-      "signal",
-      "failure signal",
-      ["Azure DevOps", "Playwright"],
-      "- Each execution produces a visible pass or failure signal that can be used to identify issues after changes or during normal operation.",
-      [
-        "- Pipeline results show whether the expected customer workflow completed successfully.",
-        "- Failures provide an early signal that an environment may require investigation.",
-        "- The same reporting path is used across the customer fleet."
-      ],
-      "result: pass | fail\nstatus: visible",
-      "Continuous test results turn customer-facing failures into an observable operational signal."
-    )
-  ],
-  problem:
-    "Manual validation did not scale consistently across the customer fleet.",
+  step(
+    "database",
+    "database connectivity",
+    ["C#", "Playwright"],
+    "Validates database connectivity as part of the recurring checks, helping identify issues that may not be visible from application-level checks alone."
+  ),
 
-  decision:
-    "Built a YAML-driven Azure DevOps pipeline with Playwright checks and Key Vault-backed credentials.",
+  step(
+    "schedule",
+    "continuous validation",
+    ["Azure DevOps", "YAML"],
+    "Runs the configured checks every 5–10 minutes across 169+ customer environments, providing recurring validation after maintenance and infrastructure changes."
+  ),
 
-  result:
-    "169+ customer environments are continuously validated every 5–10 minutes.",
-
-  improve:
-    "Next, connect test failures to the central operations dashboards with customer, server, and deployment context for faster investigation and remediation."
+  step(
+    "signal",
+    "failure reporting",
+    ["Azure DevOps", "Playwright"],
+    "Reports failed checks through the pipeline so application or infrastructure issues can be identified and investigated instead of waiting for customers to report them."
+  ),
+],
+  problem: "Manual validation did not scale consistently across the customer fleet.",
+  result: "169+ customer environments are continuously validated every 5–10 minutes.",impact: "Helped reduce customer-impacting downtime by detecting application and database issues within minutes of maintenance, while removing repetitive manual validation work."
 },
 {
   id: "epilogue",
@@ -423,99 +353,154 @@ result:
     { value: "$7000 → $4500", detail: "monthly AWS cost" }
   ],
 
+steps: [
+  step(
+    "image",
+    "container optimization",
+    ["Docker", "Linux"],
+    "Optimized application container images to reduce unnecessary layers and dependencies, resulting in smaller workloads that are more efficient to build and deploy."
+  ),
+
+  step(
+    "cluster",
+    "EKS platform",
+    ["AWS EKS", "Kubernetes", "EC2", "VPC"],
+    "Ran containerized workloads on AWS EKS using Kubernetes and EC2-based worker nodes within a structured VPC environment."
+  ),
+
+  step(
+    "traffic",
+    "traffic management",
+    ["NGINX Ingress", "AWS ALB"],
+    "Configured the ingress and load-balancing layer to route application traffic reliably into Kubernetes workloads and expose services through the appropriate AWS infrastructure."
+  ),
+
+  step(
+    "scaling",
+    "workload scaling",
+    ["Kubernetes", "HPA", "AWS EKS"],
+    "Used Kubernetes Horizontal Pod Autoscaling to adjust application capacity based on workload demand, improving resource utilization and application responsiveness."
+  ),
+
+  step(
+    "logs",
+    "log processing",
+    ["Apache Airflow", "AWS S3"],
+    "Built an automated log-processing flow that moved application and operational logs through Airflow into S3 for storage and downstream analysis."
+  ),
+
+  step(
+    "observe",
+    "platform observability",
+    ["Grafana", "CloudWatch"],
+    "Used Grafana and CloudWatch to monitor application behavior, infrastructure health, and AWS resource usage, providing visibility for reliability and optimization work."
+  ),
+
+  step(
+    "optimize",
+    "cost optimization",
+    ["AWS", "CloudWatch", "Grafana"],
+    "Reviewed infrastructure usage and observability overhead to identify unnecessary spend while maintaining the monitoring needed to operate the platform reliably."
+  ),
+],
+  problem: "The existing production setup needed stronger scaling, more efficient workloads, and better visibility into reliability and infrastructure spend.",
+  result: "Reduced image size by 35%, improved scaling by 40%, reduced downtime by 45%, and lowered monthly AWS cost from $700 to $450.",
+  impact: "Improved platform reliability and resource efficiency while reducing infrastructure spend and making production behavior easier to monitor."
+},
+{
+  id: "mlops",
+  index: "06",
+  title: "Log Pipelines & MLOps",
+  company: "Epilogue Systems",
+  phase: "mlops",
+  tags: ["observability", "reliability", "automation"],
+  outcome: "Automated log intelligence and anomaly detection at production scale",
+  diagram: "platform",
+
+  stack: [
+    "Graylog",
+    "Apache Airflow",
+    "AWS S3",
+    "PostgreSQL",
+    "Grafana",
+    "Python",
+    "Isolation Forest"
+  ],
+
+  metrics: [
+    { value: "Millions", detail: "logs processed daily" },
+    { value: "45%", detail: "less downtime" },
+    { value: "4", detail: "severity categories" }
+  ],
+
   steps: [
     step(
-      "image",
-      "container optimization",
-      ["Docker"],
-      "- Application workloads are packaged into optimized container images for consistent deployment.",
-      [
-        "- Docker images provide a repeatable runtime artifact.",
-        "- The image build was optimized to remove unnecessary layers and dependencies.",
-        "- The resulting images were 35% smaller and better suited for Kubernetes workloads."
-      ],
-      "docker build -t service:latest .",
-      "Smaller container images reduced deployment and runtime overhead."
+      "ingest",
+      "log ingestion",
+      ["Graylog"],
+      "Collects millions of daily logs from multiple services into Graylog, creating a centralized stream of application and infrastructure events."
     ),
 
     step(
-      "cluster",
-      "EKS platform",
-      ["AWS EKS", "Kubernetes"],
-      "- Containerized workloads run on a managed Kubernetes platform using AWS EKS and Linux EC2 nodes.",
-      [
-        "- Kubernetes provides the workload orchestration layer.",
-        "- EKS manages the control-plane side of the platform.",
-        "- Deployments and application resources are managed through Kubernetes manifests."
-      ],
-      "kubectl apply -f deployment.yaml",
-      "EKS provides a repeatable production runtime for containerized workloads."
+      "classify",
+      "severity filtering",
+      ["Graylog"],
+      "Filters and categorizes incoming messages by severity, including critical, error, warning, and informational events, making high-value signals easier to isolate."
     ),
 
     step(
-      "route",
-      "traffic + scaling",
-      ["NGINX Ingress", "AWS ALB", "HPA"],
-      "- Application traffic is routed through the ingress and load-balancing layer while Kubernetes automatically adjusts workload capacity.",
-      [
-        "- AWS ALB provides the external load-balancing path.",
-        "- NGINX Ingress manages application-level routing.",
-        "- Horizontal Pod Autoscaling adjusts replicas based on workload demand."
-      ],
-      "ingress: nginx\nload_balancer: alb\nautoscaling: hpa",
-      "Automated routing and horizontal scaling improved workload responsiveness by 40%."
+      "etl",
+      "ETL pipeline",
+      ["Apache Airflow", "Python"],
+      "Processes and transforms log data through scheduled ETL workflows, preparing normalized events for downstream analysis and storage."
     ),
 
     step(
-      "logs",
-      "log processing",
-      ["Apache Airflow", "AWS S3"],
-      "- Operational logs flow through an automated processing pipeline for storage and downstream analysis.",
-      [
-        "- Airflow orchestrates recurring log-processing workflows.",
-        "- S3 provides durable storage for the processed data.",
-        "- The pipeline handles millions of log records per day."
-      ],
-      "airflow dags trigger logs\nstorage: s3",
-      "An automated log pipeline turned high-volume production data into a repeatable operational workflow."
+      "detect",
+      "anomaly detection",
+      ["Isolation Forest", "Python"],
+      "Applies Isolation Forest to processed log patterns to identify abnormal behavior that may indicate emerging application or infrastructure issues."
     ),
 
     step(
-      "observe",
-      "observe + optimize",
-      ["Grafana", "CloudWatch"],
-      "- Application health, infrastructure behavior, and AWS usage are monitored to close the reliability and cost loop.",
-      [
-        "- Grafana provides operational dashboards and service visibility.",
-        "- CloudWatch provides AWS infrastructure and application telemetry.",
-        "Cost usage is reviewed alongside production health to identify optimization opportunities."
-      ],
-      "observe: grafana + cloudwatch\ncost: $700 -> $450",
-      "Observability and cost monitoring helped reduce production downtime by 45% while lowering monthly AWS spend."
+      "store",
+      "results storage",
+      ["AWS S3", "PostgreSQL"],
+      "Stores processed log data and anomaly results in S3 and PostgreSQL, providing durable storage for analysis and operational investigation."
+    ),
+
+    step(
+      "visualize",
+      "operational dashboards",
+      ["Grafana", "PostgreSQL"],
+      "Surfaces log patterns and detected anomalies through Grafana dashboards, giving engineers a clearer view of unusual production behavior."
+    ),
+
+    step(
+      "respond",
+      "reliability feedback",
+      ["Grafana", "Isolation Forest"],
+      "Uses anomaly signals and operational visibility to help identify abnormal production behavior earlier and support faster investigation of reliability issues."
     )
   ],
-  problem:
-    "The existing production setup needed stronger scaling, more efficient workloads, and better visibility into reliability and infrastructure spend.",
 
-  decision:
-    "Containerized workloads on EKS with optimized images, automated scaling, layered traffic management, Airflow log pipelines, and Grafana/CloudWatch observability.",
+  problem: "Millions of daily multi-service logs made it difficult to identify abnormal production behavior and distinguish important signals from routine events.",
 
-  result:
-    "Reduced image size by 35%, improved scaling by 40%, reduced downtime by 45%, and lowered monthly AWS cost from $700 to $450.",
+  result: "Built an automated ETL and anomaly-detection pipeline using Isolation Forest, processing millions of daily logs and surfacing abnormal patterns through Grafana.",
 
-  improve:
-    "Next, formalize service SLOs, alert thresholds, and error budgets so reliability decisions are tied to measurable production objectives."
+  impact: "Improved production visibility and helped reduce downtime by 45% through earlier detection of abnormal application and infrastructure behavior.",
+
+  next: "Expand anomaly detection with richer signals and more actionable alerts"
 },
 {
   id: "event-organizer",
-  index: "06",
+  index: "07",
   title: "Event Organizer GitOps",
   company: "Personal Project",
   phase: "platform",
   tags: ["gitops", "cost", "automation"],
   outcome: "10+ deployments per day with self-healing synchronization",
   diagram: "gitops",
-
   stack: [
     "ArgoCD",
     "Terraform",
@@ -526,97 +511,48 @@ result:
     "AWS",
     "GitHub Actions"
   ],
-
   metrics: [
     { value: "10+", detail: "deployments per day" },
     { value: "99.9%", detail: "uptime" },
     { value: "Private", detail: "subnet AWS design" }
   ],
-
   steps: [
     step(
       "code",
       "Git as desired state",
       ["Git"],
-      "- Application and deployment changes begin as version-controlled Git changes.",
-      [
-        "- Git stores the desired application state.",
-        "- Deployment configuration is versioned alongside the application.",
-        "- Changes become auditable and reproducible through the repository."
-      ],
-      "git push origin main",
-      "Git becomes the single source of deployment intent."
+      "Application and deployment changes begin as version-controlled Git changes."
     ),
-
     step(
       "infra",
       "private AWS infrastructure",
       ["Terraform", "AWS"],
-      "- Terraform defines and provisions the AWS infrastructure required by the application.",
-      [
-        "- Infrastructure is defined as code.",
-        "- The application runs within a private-subnet network design.",
-        "- Infrastructure changes can be reviewed and reproduced through Terraform."
-      ],
-      "terraform apply\nnetwork: private",
-      "Infrastructure provisioning becomes repeatable and version-controlled."
+      "Terraform defines and provisions the AWS infrastructure required by the application."
     ),
-
     step(
       "sync",
       "GitOps reconciliation",
       ["ArgoCD"],
-      "- ArgoCD continuously compares the Git-defined desired state with the live Kubernetes environment and reconciles differences.",
-      [
-        "- Git remains the source of deployment intent.",
-        "- ArgoCD automatically synchronizes application changes into the cluster.",
-        "- Self-healing restores the declared state when runtime drift occurs."
-      ],
-      "argocd app sync event-organizer\nsync: automated",
-      "Self-healing GitOps removes manual deployment synchronization and supports frequent releases."
+      "ArgoCD continuously compares the Git-defined desired state with the live Kubernetes environment and reconciles differences."
     ),
-
     step(
       "runtime",
       "EKS runtime",
       ["EKS", "Kubernetes"],
-      "- The application runs as a Kubernetes workload on EKS.",
-      [
-        "- EKS provides the production runtime.",
-        "- Kubernetes manages the deployed application resources.",
-        "- The same deployment model is reused across releases."
-      ],
-      "kubectl get pods\nnamespace: event-organizer",
-      "A consistent Kubernetes runtime makes releases repeatable and easier to recover."
+      "The application runs as a Kubernetes workload on EKS."
     ),
-
     step(
       "data",
       "RDS persistence",
       ["RDS", "AWS"],
-      "- Application state is persisted independently from the Kubernetes runtime through Amazon RDS.",
-      [
-        "- RDS provides managed relational persistence.",
-        "- Application and infrastructure lifecycles remain separated from database state.",
-        "- The production system maintains 99.9% uptime."
-      ],
-      "database: rds\nstatus: connected",
-      "Managed persistence keeps application data independent from application deployments."
+      "Application state is persisted independently from the Kubernetes runtime through Amazon RDS."
     )
   ],
-
   problem:
     "Manual deployment and infrastructure workflows made frequent releases and recovery harder to reproduce consistently.",
-
-  decision:
-    "Defined AWS infrastructure with Terraform and used Git as the desired state for self-healing ArgoCD deployments on EKS.",
-
-  result:
-    "The platform supports 10+ deployments per day with self-healing synchronization and 99.9% uptime.",
-
-  improve:
-    "Next, strengthen the platform with automated RDS backup-restore verification and disaster-recovery testing."
-},
+  result: "10+ deployments per day · self-healing synchronization · 99.9% uptime",
+  impact: "Improved deployment frequency and reliability through automated GitOps workflows.",
+}
   ] as CaseStudy[],
   pipelineLogs: [
     { time: "10:02:11", message: "request accepted · rbac ok" },
@@ -719,12 +655,57 @@ experience: [
     { school: "Drexel University", degree: "M.S., Software Engineering", location: "Philadelphia, PA", dates: "Sep 2023 to Mar 2025" },
     { school: "Sona College of Technology", degree: "B.Tech, Information Technology", location: "Salem, India", dates: "Sep 2018 to Jun 2022" },
   ] as EducationItem[],
-  capabilities: {
-    "Cloud & Containers": ["AWS", "Azure", "EKS", "Kubernetes", "Docker", "EC2", "VPC", "RDS"],
-    "CI/CD & IaC": ["GitHub Actions", "Azure DevOps", "Terraform", "ArgoCD", "Ansible", "Docker"],
-    "Security & Observability": ["Azure Key Vault", "CloudWatch", "Grafana", "NGINX", "RBAC", "Airflow", "security checks"],
-    "Languages & Practices": ["Python", "C#", "PowerShell", "Node.js", "PostgreSQL", "Playwright", "Linux", "WinRM", "React", "Neo4j GDS", "BigQuery", "GraphRAG"],
-  },
+capabilities: {
+  "Cloud & Containers": [
+    "AWS",
+    "Azure",
+    "Kubernetes",
+    "EKS",
+    "Docker",
+    "EC2",
+    "VPC",
+    "RDS",
+    "VMware ESXi"
+  ],
+
+  "CI/CD & Infrastructure": [
+    "GitHub Actions",
+    "Azure DevOps",
+    "Terraform",
+    "ArgoCD",
+    "Ansible",
+    "ManageIQ"
+  ],
+
+  "Observability & Reliability": [
+    "CloudWatch",
+    "Grafana",
+    "Graylog",
+    "Apache Airflow",
+    "NGINX",
+    "RBAC",
+    "WinRM"
+  ],
+
+  "Languages & Automation": [
+    "Python",
+    "C#",
+    "PowerShell",
+    "Node.js",
+    "PostgreSQL",
+    "Redis",
+    "Celery",
+    "Playwright",
+    "React"
+  ],
+
+  "Data & AI": [
+    "Neo4j GDS",
+    "BigQuery",
+    "GraphRAG",
+    "Isolation Forest"
+  ]
+},
 } as const;
 
 export const allTags: CaseTag[] = ["provisioning", "fleet", "reliability", "observability", "gitops", "cost"];

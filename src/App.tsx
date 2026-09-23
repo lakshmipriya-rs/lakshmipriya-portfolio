@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowUpRight,
-  Check,
   ChevronDown,
-  Clipboard,
   Command,
   Download,
   Mail,
@@ -11,8 +9,6 @@ import {
   Moon,
   Pause,
   Play,
-  RotateCcw,
-  Square,
   Sun,
   X,
 } from "lucide-react";
@@ -20,7 +16,7 @@ import {
   allTags,
   content,
   type CaseStudy,
-  type FlowStep,
+  type CaseTag,
 } from "./data/content";
 
 const base = import.meta.env.BASE_URL;
@@ -143,58 +139,7 @@ function FilterChips({
   );
 }
 
-function StepDetail({ step, onCopy }: { step: FlowStep; onCopy: () => void }) {
-  return (
-    <div className="step-detail">
-      <div>
-        <h4 className="role-step-title">What happens</h4>
-        <p>{step.summary}</p>
-        <ul>
-          {step.bullets.map((bullet) => (
-            <li key={bullet}>{bullet}</li>
-          ))}
-        </ul>
-      </div>
-      <div>
-        <h4 className="role-step-title">Tool</h4>
-        <div className="tool-list">
-          {step.tool.map((tool) => (
-            <span key={tool}>{tool}</span>
-          ))}
-        </div>
-        <h4 className="role-step-title">
-          Snippet <small>illustrative</small>
-        </h4>
-        <div className="snippet">
-          <button
-            className="copy-button"
-            onClick={onCopy}
-            aria-label="Copy illustrative snippet"
-          >
-            <Clipboard size={14} />
-          </button>
-          <pre>{step.snippet ?? ""}</pre>
-        </div>
-        <h4 className="role-step-title">Outcome</h4>
-        <p className="step-outcome">{step.outcome ?? ""}</p>
-      </div>
-    </div>
-  );
-}
-
-function CaseResult({ text }: { text: string }) {
-  return (
-    <p className="case-result">
-      {text.split(/(7 days|approximately 14 minutes|~14 minutes)/g).map((part) =>
-        /^(7 days|approximately 14 minutes|~14 minutes)$/.test(part) ? (
-          <span className="key-result" key={part}>{part}</span>
-        ) : part,
-      )}
-    </p>
-  );
-}
-
-function HeroPipelineCard({ onOpenCase }: { onOpenCase: (step: number) => void }) {
+function HeroPipelineCard() {
   const cardRef = useRef<HTMLElement>(null);
   const stages = content.cases.find((item) => item.id === "vm-provisioning")?.steps ?? [];
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -290,240 +235,143 @@ function HeroPipelineCard({ onOpenCase }: { onOpenCase: (step: number) => void }
       <div className="pipeline-metrics">
         {content.metrics.map((metric) => <CountMetric key={metric.detail} value={metric.value} detail={metric.detail} />)}
       </div>
-      {selected !== null ? (
-        <div className="pipeline-popover">
-          <strong>{stages[selected].label}</strong>
-          <ul>{stages[selected].bullets.slice(0, 2).map((bullet) => <li key={bullet}>{bullet}</li>)}</ul>
-          <a href={`#vm-provisioning/step-${selected + 1}`} onClick={() => onOpenCase(selected)}>open case study</a>
-        </div>
-      ) : null}
     </section>
-  );
-}
-
-function CaseFlow({ steps, caseId }: { steps: FlowStep[]; caseId: string }) {
-  const hashStep =
-    Number.parseInt(window.location.hash.match(/step-(\d+)/)?.[1] ?? "1", 10) -
-    1;
-  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const [selected, setSelected] = useState(
-    Number.isFinite(hashStep) && hashStep >= 0
-      ? Math.min(hashStep, steps.length - 1)
-      : 0,
-  );
-  const [autoFlow, setAutoFlow] = useState(!reduced);
-  const [running, setRunning] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const stepRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    const handleHash = () => {
-      const next =
-        Number.parseInt(
-          window.location.hash.match(/step-(\d+)/)?.[1] ?? "1",
-          10,
-        ) - 1;
-      if (next >= 0 && next < steps.length) {
-        setSelected(next);
-        setAutoFlow(false);
-      }
-    };
-    window.addEventListener("hashchange", handleHash);
-    return () => window.removeEventListener("hashchange", handleHash);
-  }, [steps.length]);
-  useEffect(() => {
-    if (!autoFlow || running || reduced) return;
-    const timer = window.setInterval(
-      () => setSelected((current) => (current + 1) % steps.length),
-      1700,
-    );
-    return () => window.clearInterval(timer);
-  }, [autoFlow, reduced, running, steps.length]);
-  useEffect(() => {
-    if (!running) return;
-    setAutoFlow(false);
-    let cursor = 0;
-    let resetTimer: number | undefined;
-    const timer = window.setInterval(() => {
-      setSelected(cursor);
-      cursor += 1;
-      if (cursor >= steps.length) {
-        window.clearInterval(timer);
-        resetTimer = window.setTimeout(() => {
-          setSelected(0);
-          setRunning(false);
-          setAutoFlow(!reduced);
-        }, 1500);
-      }
-    }, 1200);
-    return () => {
-      window.clearInterval(timer);
-      if (resetTimer) window.clearTimeout(resetTimer);
-    };
-  }, [running, reduced, steps]);
-  useEffect(() => {
-    if (!running)
-      window.history.replaceState(null, "", `#${caseId}/step-${selected + 1}`);
-  }, [caseId, selected, running]);
-  const select = (index: number) => {
-    setAutoFlow(false);
-    setSelected(Math.max(0, Math.min(index, steps.length - 1)));
-    window.history.replaceState(null, "", `#${caseId}/step-${index + 1}`);
-  };
-  const onKey = (event: React.KeyboardEvent) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      select(selected);
-    }
-    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-      event.preventDefault();
-      select((selected + 1) % steps.length);
-    }
-    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-      event.preventDefault();
-      select((selected - 1 + steps.length) % steps.length);
-    }
-  };
-  const copy = async () => {
-    await navigator.clipboard?.writeText(steps[selected].snippet ?? "");
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1200);
-  };
-  return (
-    <div className={autoFlow ? "flow auto-flow" : "flow manual-flow"}>
-      <div className="flow-top">
-        <div className="flow-controls">
-          <button
-            onClick={() => setAutoFlow(!autoFlow)}
-            aria-pressed={autoFlow}
-          >
-            {autoFlow ? "auto-flow on" : "auto-flow"}
-          </button>
-          <button onClick={() => setRunning(!running)}>
-            {running ? <Square size={13} /> : <Play size={13} />}{" "}
-            {running ? "Pause" : "Run flow"}
-          </button>
-          <button
-            onClick={() => {
-              setRunning(false);
-              setSelected(0);
-              setAutoFlow(!reduced);
-            }}
-          >
-            <RotateCcw size={13} /> Reset
-          </button>
-        </div>
-      </div>
-      <div
-        className="stepper"
-        role="tablist"
-        tabIndex={0}
-        aria-label={`${caseId} flow`}
-        onKeyDown={onKey}
-      >
-        {steps.map((item, index) => (
-          <button
-            ref={index === selected ? stepRef : undefined}
-            role="tab"
-            aria-selected={index === selected}
-            className={
-              index === selected
-                ? "flow-step selected"
-                : index < selected
-                  ? "flow-step passed"
-                  : "flow-step"
-            }
-            key={item.id}
-            onClick={() => select(index)}
-          >
-            <span className="flow-step-number">{index + 1}</span>
-            <span className="flow-step-copy">
-              <strong>{item.label}</strong>
-            </span>
-          </button>
-        ))}
-      </div>
-      <StepDetail step={steps[selected]} onCopy={copy} />
-      {copied ? (
-        <span className="copy-status">
-          <Check size={13} /> copied
-        </span>
-      ) : null}
-    </div>
   );
 }
 
 function CaseDetail({
   item,
-  onTool,
+  onClose,
 }: {
   item: CaseStudy;
-  onTool: (tool: string) => void;
+  onClose?: () => void;
 }) {
-  const [open, setOpen] = useState(true);
+  const [selected, setSelected] = useState(0);
+  const [running, setRunning] = useState(true);
+  const [completed, setCompleted] = useState(false);
+  useEffect(() => {
+    if (!running) return;
+    let cursor = 0;
+    const timer = window.setInterval(() => {
+      setSelected(cursor);
+      cursor += 1;
+      if (cursor >= item.steps.length) {
+        window.clearInterval(timer);
+        setRunning(false);
+        setCompleted(true);
+      }
+    }, 1200);
+    return () => window.clearInterval(timer);
+  }, [item.steps.length, running]);
+
+  const caseDefaults: Record<string, { problem: string; result: string; next: string }> = {
+    "vm-provisioning": {
+      problem: "Manual coordination delayed every VM request by days",
+      result: "7 days → ~14 min · 7+ steps automated · 15+ VMs",
+      next: "More products and VM templates with requirement-based selection"
+    },
+    "environment-navigator": {
+      problem: "Fleet operations and connectivity were spread across multiple systems",
+      result: "453+ Windows servers · FA-EAM + M5 · centralized operations",
+      next: "Expand M5 workflows and automate more provisioning paths"
+    },
+    "config-drift": {
+      problem: "Manual audits could not scale across shared tenants",
+      result: "144+ files · 13 servers · 64 tenants · 15 min cycle",
+      next: "Expand customer coverage and provide deeper configuration-drift details"
+    },
+    "synthetic-testing": {
+      problem: "No repeatable way to validate 169+ customers post-change",
+      result: "169+ customers · checks every 5–10 min · self-service YAML",
+      next: "Standardize test configurations and improve failure reporting and diagnosis"
+    },
+    "eks-platform": {
+      problem: "Platform needed stronger scaling, reliability, and cost visibility",
+      result: "$700 → $450/month · 45% less downtime · images 35% smaller",
+      next: "Improve autoscaling and observability with stronger platform SLOs"
+    },
+    "mlops": {
+      problem: "Millions of logs made abnormal production behavior hard to detect",
+      result: "Millions of logs · Isolation Forest · automated anomaly detection",
+      next: "Expand anomaly detection with richer signals and more actionable alerts"
+    },
+    "event-organizer": {
+      problem: "No repeatable path from infrastructure definition to production",
+      result: "10+ deploys/day · self-healing sync · 99.9% uptime",
+      next: "Verify RDS backup and restore workflows"
+    }
+  };
+  const caseInfo = caseDefaults[item.id] || { problem: item.problem, result: item.result, next: "iterate" };
+
   return (
     <div className="case-detail">
-      <button
-        className="collapse-button"
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-      >
-        <span className="role-eyebrow">CASE {item.index} · {item.phase}</span>
-        <ChevronDown className={open ? "rotated" : ""} size={16} />
-      </button>
-      {open ? (
-        <>
-          <div className="detail-heading">
-            <div>
-              <h3 className="role-case-title">{item.title}</h3>
-              <CaseResult text={item.outcome} />
-            </div>
-          </div>
-          <div className="detail-metrics">
-            {item.metrics.map((metric) => (
-              <CountMetric
-                key={metric.detail}
-                value={metric.value}
-                detail={metric.detail}
-              />
-            ))}
-          </div>
-          <CaseFlow steps={item.steps} caseId={item.id} />
-          <div className="postmortem">
-            <h4>After Action Review</h4>
-            <div className="postmortem-grid">
-              <div>
-                <h5>Problem</h5>
-                <p
-                  className={
-                    item.problem.startsWith("[TODO") ? "needs-input" : ""
-                  }
+      <div 
+        className="detail-zone identity" 
+        onClick={() => onClose ? onClose() : undefined}
+        onKeyDown={(e) => {
+          if ((e.key === 'Enter' || e.key === ' ') && onClose) {
+            e.preventDefault();
+            onClose();
+          }
+        }}
+        role={onClose ? "button" : undefined}
+        tabIndex={onClose ? 0 : -1}
+        style={{ cursor: onClose ? 'pointer' : 'default' }}>
+        <div className="detail-eyebrow">CASE {item.index} · {item.phase} <span className={`tool-chip case-tag ${item.tags[0]}`}>{item.tags[0]}</span></div>
+        <h3 id={`case-${item.id}`} className="case-title large">{item.title}</h3>
+        {item.impact ? <p className="case-impact">{item.impact}</p> : null}
+      </div>
+
+      <div className="detail-zone live-flow">
+        <div className="flow-controls-row">
+          <button className="flow-control-btn" onClick={() => { setRunning(false); setSelected(0); setRunning(true); setCompleted(false); document.querySelector('.case-detail')?.scrollIntoView({ behavior: 'smooth' }); }}>Run flow</button>
+          <button className="flow-control-btn" onClick={() => setRunning((v) => !v)} aria-pressed={running}>{running ? "Auto-flow: On" : "Auto-flow"}</button>
+        </div>
+        <div className="flow-stepper">
+          {item.steps.flatMap((s, i) => {
+            const isLast = i === item.steps.length - 1;
+            const isPassed = i < selected || (i === selected && isLast) || (completed && isLast);
+            const nextIsPassed = i < item.steps.length - 1 && (i + 1 <= selected || (completed && i + 1 === item.steps.length - 1));
+            return [
+              <div key={`node-${s.id}`} className="flow-node-wrapper">
+                <button
+                  className={`flow-node-circle ${isPassed ? "passed" : i === selected ? "selected" : ""}`}
+                  onClick={() => { setSelected(i); setRunning(false); }}
+                  aria-pressed={i === selected}
                 >
-                  {item.problem}
-                </p>
-              </div>
-              <div>
-                <h5>Decision &amp; trade-offs</h5>
-                <p>{item.decision}</p>
-              </div>
-              <div>
-                <h5>Result</h5>
-                <p>{item.result}</p>
-              </div>
-              <div>
-                <h5>What I would improve next</h5>
-                <p className="needs-input">{item.improve}</p>
-              </div>
-            </div>
+                  {i + 1}
+                </button>
+                <div className="flow-node-label">{s.label}</div>
+              </div>,
+              !isLast && <div key={`connector-${s.id}`} className={`flow-connector ${nextIsPassed ? "passed" : ""}`} />
+            ];
+          })}
+        </div>
+        {item.steps[selected] && (
+          <div className="flow-detail-row active">
+            <div className="flow-detail">&gt; {item.steps[selected].summary}</div>
           </div>
-          <div className="stack case-stack">
-            {item.stack.map((tool) => (
-              <button key={tool} onClick={() => onTool(tool)}>
-                {tool}
-              </button>
-            ))}
-          </div>
-        </>
-      ) : null}
+        )}
+        {!item.steps[selected] && (
+          <div className="flow-detail-row" />
+        )}
+      </div>
+
+      <div className="detail-zone definition-list">
+        <div className="tf-caption">// case summary</div>
+        <div className="def-row">
+          <div className="def-label">problem</div>
+          <div className="def-value">{caseInfo.problem}</div>
+        </div>
+        <div className="def-row">
+          <div className="def-label">result</div>
+          <div className="def-value">{caseInfo.result}</div>
+        </div>
+        <div className="def-row">
+          <div className="def-label">next</div>
+          <div className="def-value">{caseInfo.next}</div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -540,15 +388,39 @@ function CaseIndex({
   setSelectedTag: (tag: string) => void;
 }) {
   const [search, setSearch] = useState("");
-  const filtered = content.cases.filter(
-    (item) =>
-      (selectedTag === "all" ||
-        (toolIndexedCases.includes(item) &&
-          (item.tags.includes(selectedTag as never) ||
-            caseMatchesTool(item, selectedTag)))) &&
-      `${item.title} ${item.company} ${item.stack.join(" ")}`
-        .toLowerCase()
-        .includes(search.toLowerCase()),
+  const displayTagMap: Record<string, string> = {
+    "vm-provisioning": "provisioning",
+    "environment-navigator": "fleet",
+    "config-drift": "reliability",
+    "synthetic-testing": "validation",
+    epilogue: "observability",
+    "event-organizer": "gitops",
+    "mlops": "mlops",
+  } as const;
+
+  const filtered = content.cases.filter((item) => {
+    const matchesTag =
+      selectedTag === "all" ||
+      item.tags.includes(selectedTag as CaseTag) ||
+      caseMatchesTool(item, selectedTag) ||
+      (displayTagMap[item.id] ?? item.phase) === selectedTag;
+    const matchesSearch = `${item.title} ${item.company} ${item.stack.join(" ")}`
+      .toLowerCase()
+      .includes(search.toLowerCase());
+    return matchesTag && matchesSearch;
+  });
+  
+  const desiredTags = [
+    "provisioning",
+    "fleet",
+    "reliability",
+    "validation",
+    "observability",
+    "gitops",
+    "cost",
+  ];
+  const toolsToShow = desiredTags.filter((tag) =>
+    content.cases.some((item) => (displayTagMap[item.id] ?? item.phase) === tag || item.tags.includes(tag as CaseTag)),
   );
   useEffect(() => {
     const onSlash = (event: KeyboardEvent) => {
@@ -583,7 +455,7 @@ function CaseIndex({
         </p>
       </div>
       <div className="index-toolbar">
-        <FilterChips active={selectedTag} select={setSelectedTag} />
+        <FilterChips active={selectedTag} select={setSelectedTag} tools={toolsToShow} />
         <label className="search-box">
           <span>/</span>
           <input
@@ -601,53 +473,56 @@ function CaseIndex({
           <button onClick={() => setSelectedTag("all")}>clear filter</button>
         </div>
       ) : null}
-      <div className="case-panel">
-        <div className="case-panel-header">
-          <span className="case-panel-dots">
-            <span />
-            <span />
-            <span />
-          </span>
-          <span className="case-panel-title">./cases</span>
-          <span className="case-panel-count">
-            {filtered.length} {filtered.length === 1 ? "case" : "cases"} ·{" "}
-            {allTags.length} tags
-          </span>
-        </div>
-        <div className="case-index-list">
-          {filtered.map((item) => (
-            <div
+      <div className="case-index-list">
+        {filtered.map((item) => {
+          const displayTagMap: Record<string, string> = {
+            "vm-provisioning": "provisioning",
+            "environment-navigator": "fleet",
+            "config-drift": "reliability",
+            "synthetic-testing": "validation",
+            epilogue: "observability",
+            "event-organizer": "gitops",
+            "mlops": "mlops",
+          } as const;
+          const displayTag = displayTagMap[item.id] ?? item.phase;
+          return (
+            <article
               className={
-                openCase === item.id ? "case-row expanded" : "case-row"
+                openCase === item.id ? "experience-item case-card expanded" : "experience-item case-card"
               }
               id={`case-${item.id}`}
               key={item.id}
             >
-              <button
-                className="case-row-trigger"
-                aria-expanded={openCase === item.id}
-                onClick={() =>
-                  setOpenCase(openCase === item.id ? null : item.id)
-                }
-              >
-                <span className="permissions">drwxr-xr-x</span>
-                <span className="case-year">2026</span>
-                <span className="case-phase">{item.phase}</span>
-                <strong>{item.title}</strong>
-                <span className="case-summary">
-                  {item.metrics
-                    .slice(0, 2)
-                    .map((metric) => metric.value)
-                    .join(" · ")}{" "}
-                  →
-                </span>
-              </button>
               {openCase === item.id ? (
-                <CaseDetail item={item} onTool={setSelectedTag} />
-              ) : null}
-            </div>
-          ))}
-        </div>
+                <CaseDetail item={item} onClose={() => setOpenCase(null)} />
+              ) : (
+                <button
+                  className="case-card-trigger"
+                  aria-expanded={false}
+                  onClick={() => setOpenCase(item.id)}
+                >
+                  <div className="case-left">
+                    <span className={`tool-chip case-tag ${displayTag}`}>{displayTag}</span>
+                    <span className="case-year">2026</span>
+                  </div>
+                  <div className="case-main">
+                    <h3 className="case-title">{item.title}</h3>
+                    <p className="case-desc">{item.result}</p>
+                    <div className="case-metrics">
+                      {item.metrics.slice(0, 3).map((m) => `${m.value} ${m.detail}`).join(" · ")}
+                    </div>
+                  
+                  </div>
+                  <div className="case-right">
+                    <span className="case-arrow" aria-hidden>
+                      →
+                    </span>
+                  </div>
+                </button>
+              )}
+            </article>
+          );
+        })}
       </div>
     </section>
   );
@@ -1019,6 +894,9 @@ function App() {
     if (theme !== "system") document.documentElement.dataset.theme = theme;
   }, [theme]);
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  }, []);
+  useEffect(() => {
     const prompt = "lakshmipriya@ops:~$ whoami";
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setPromptText(prompt);
@@ -1050,137 +928,134 @@ function App() {
   const selectCase = (id: string) => {
     setOpenCase(id);
   };
-  return (
-    <>
-      <a className="skip-link" href="#main-content">
-        Skip to content
-      </a>
-      <header className="site-header">
-        <a className="wordmark" href="#hero">
-          ops://<span>LP</span>
+    return (
+      <>
+        <a className="skip-link" href="#main-content">
+          Skip to content
         </a>
-        <nav className={menuOpen ? "nav open" : "nav"}>
-          {["cases", "capabilities", "experience", "education", "contact"].map(
-            (item) => (
-              <a
-                key={item}
-                href={`#${item}`}
-                onClick={() => setMenuOpen(false)}
-              >
-                {item}
-              </a>
-            ),
-          )}
-        </nav>
-        <div className="header-actions">
-          <button
-            className="theme-button"
-            onClick={toggleTheme}
-            aria-label="Toggle theme"
-          >
-            {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
-          </button>
-          <button
-            className="console-trigger"
-            onClick={() => setConsoleOpen(true)}
-          >
-            <Command size={14} /> Console <kbd>⌘K</kbd>
-          </button>
-          <button
-            className="menu-trigger"
-            aria-label="Toggle navigation"
-            onClick={() => setMenuOpen(!menuOpen)}
-          >
-            {menuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-        </div>
-      </header>
-      <main id="main-content">
-        <section className="hero section-wrap" id="hero">
-          <div className="prompt-line">
-            <span>{promptText}</span>
-            <i />
+        <header className="site-header">
+          <a className="wordmark" href="#hero">
+            ops://<span>LP</span>
+          </a>
+          <nav className={menuOpen ? "nav open" : "nav"}>
+            {["cases", "capabilities", "experience", "education", "contact"].map(
+              (item) => (
+                <a
+                  key={item}
+                  href={`#${item}`}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {item}
+                </a>
+              ),
+            )}
+          </nav>
+          <div className="header-actions">
+            <button
+              className="theme-button"
+              onClick={toggleTheme}
+              aria-label="Toggle theme"
+            >
+              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+            <button
+              className="console-trigger"
+              onClick={() => setConsoleOpen(true)}
+            >
+              <Command size={14} /> Console <kbd>⌘K</kbd>
+            </button>
+            <button
+              className="menu-trigger"
+              aria-label="Toggle navigation"
+              onClick={() => setMenuOpen(!menuOpen)}
+            >
+              {menuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
           </div>
-          <p className="whoami-name"></p>
-          <div className={heroReady ? "hero-copy revealed" : "hero-copy"}>
-            <SectionLabel index="00">DevOps / Cloud / Reliability</SectionLabel>
-            <h1 className="role-hero-h1">
-              Infrastructure
-              <br />
-              that ships itself.
-            </h1>
-            <p className="hero-value">
-              DevOps Engineer who turns multi-day manual operations into
-              minutes-long, auditable automation across Azure, AWS, and
-              Kubernetes.
-            </p>
-            <div className="hero-actions">
-              <a className="button button-primary" href="#cases">
-                ls cases <ArrowUpRight size={15} />
-              </a>
-              <a
-                className="button button-secondary"
-                href={`${base}resume.pdf`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <Download size={15} /> wget resume.pdf
-              </a>
-              <button
-                className="text-button"
-                onClick={() => setConsoleOpen(true)}
-              >
-                open console <span>⌘K</span>
-              </button>
+        </header>
+        <main id="main-content">
+          <section className="hero section-wrap" id="hero">
+            <div className="prompt-line">
+              <span>{promptText}</span>
+              <i />
             </div>
-            <div className="status-json">
-              <span>{"{"}</span>
-              <p>
-                "status": <b>"open to work"</b>,
+            <p className="whoami-name"></p>
+            <div className={heroReady ? "hero-copy revealed" : "hero-copy"}>
+              <SectionLabel index="00">DevOps / Cloud / Reliability</SectionLabel>
+              <h1 className="role-hero-h1">
+                Automation
+                <br />
+                that runs reliably.
+              </h1>
+              <p className="hero-value">
+                DevOps Engineer who turns multi-day manual operations into
+                minutes-long, auditable automation across Azure, AWS, and
+                Kubernetes.
               </p>
-              <p>
-                "seeking": <b>"DevOps / Cloud / Platform Engineer roles"</b>,
-              </p>
-              <p>
-                "region": <b>"{content.location} / open to relocation"</b>
-              </p>
-              <span>{"}"}</span>
+              <div className="hero-actions">
+                <a className="button button-primary" href="#cases">
+                  ls cases <ArrowUpRight size={15} />
+                </a>
+                <a
+                  className="button button-secondary"
+                  href={`${base}projects/Lakshmipriya.pdf`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Download size={15} /> wget resume.pdf
+                </a>
+                <button
+                  className="text-button"
+                  onClick={() => setConsoleOpen(true)}
+                >
+                  open console <span>⌘K</span>
+                </button>
+              </div>
+              <div className="status-json">
+                <span>{"{"}</span>
+                <p>
+                  "status": <b>"open to work"</b>,
+                </p>
+                <p>
+                  "seeking": <b>"DevOps / Cloud / Platform Engineer roles"</b>,
+                </p>
+                <p>
+                  "region": <b>"{content.location} / open to relocation"</b>
+                </p>
+                <span>{"}"}</span>
+              </div>
             </div>
-          </div>
-          <HeroPipelineCard onOpenCase={(step) => {
-            setOpenCase("vm-provisioning");
-            window.history.replaceState(null, "", `#vm-provisioning/step-${step + 1}`);
-          }} />
-        </section>
-        <CaseIndex
-          openCase={openCase}
-          setOpenCase={setOpenCase}
-          selectedTag={selectedTag}
-          setSelectedTag={setSelectedTag}
+            <HeroPipelineCard />
+          </section>
+          <CaseIndex
+            openCase={openCase}
+            setOpenCase={setOpenCase}
+            selectedTag={selectedTag}
+            setSelectedTag={setSelectedTag}
+          />
+          <StackManifest
+            selectedTag={selectedTag}
+            setSelectedTag={setSelectedTag}
+          />
+          <Experience open={openExperience} setOpen={setOpenExperience} />
+          <Education />
+          <Contact />
+        </main>
+        <footer className="status-bar">
+          <span>
+            <i /> status: open to work
+          </span>
+          <span>region: {content.location}</span>
+          <span>open to relocation</span>
+          <span>last deploy: {buildTime}</span>
+        </footer>
+        <CommandPalette
+          open={consoleOpen}
+          close={() => setConsoleOpen(false)}
+          setCase={selectCase}
+          toggleTheme={toggleTheme}
         />
-        <StackManifest
-          selectedTag={selectedTag}
-          setSelectedTag={setSelectedTag}
-        />
-        <Experience open={openExperience} setOpen={setOpenExperience} />
-        <Education />
-        <Contact />
-      </main>
-      <footer className="status-bar">
-        <span>
-          <i /> status: open to work
-        </span>
-        <span>region: {content.location}</span>
-        <span>open to relocation</span>
-        <span>last deploy: {buildTime}</span>
-      </footer>
-      <CommandPalette
-        open={consoleOpen}
-        close={() => setConsoleOpen(false)}
-        setCase={selectCase}
-        toggleTheme={toggleTheme}
-      />
-    </>
+      </>
   );
 }
 
