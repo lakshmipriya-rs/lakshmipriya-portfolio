@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Lakshmipriya — DevOps · SRE · Platform Engineer</title>
+    <meta
+      name="description"
+      content="Lakshmipriya — DevOps engineer focused on SRE and platform engineering. Case studies in reliable, auditable automation across Azure, AWS, and Kubernetes. Open to DevOps, SRE, and Platform Engineering roles."
+    />
+    <meta name="author" content="Lakshmipriya" />
+    <link
+      rel="canonical"
+      href="https://lakshmipriya0812.github.io/lakshmipriya-portfolio/"
+    />
+    <meta
+      name="theme-color"
+      media="(prefers-color-scheme: dark)"
+      content="#06080b"
+    />
+    <meta
+      name="theme-color"
+      media="(prefers-color-scheme: light)"
+      content="#f3f5f7"
+    />
+
+    <meta property="og:type" content="profile" />
+    <meta property="og:site_name" content="Lakshmipriya" />
+    <meta
+      property="og:title"
+      content="Lakshmipriya — DevOps · SRE · Platform Engineer · Open to work"
+    />
+    <meta
+      property="og:description"
+      content="DevOps, SRE, and Platform Engineer. 7-day VM provisioning cut to ~14 minutes, 453+ servers behind one platform, 169+ customer environments probed every 5–10 minutes."
+    />
+    <meta
+      property="og:url"
+      content="https://lakshmipriya0812.github.io/lakshmipriya-portfolio/"
+    />
+    <meta
+      property="og:image"
+      content="https://lakshmipriya0812.github.io/lakshmipriya-portfolio/images/formal-profile.jpg"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Lakshmipriya — DevOps · SRE · Platform Engineer"
+    />
+    <meta
+      name="twitter:description"
+      content="DevOps, SRE, and Platform Engineer building reliable, auditable automation across Azure, AWS, and Kubernetes."
+    />
+    <meta
+      name="twitter:image"
+      content="https://lakshmipriya0812.github.io/lakshmipriya-portfolio/images/formal-profile.jpg"
+    />
+
+    <link
+      rel="icon"
+      href="/lakshmipriya-portfolio/favicon.svg"
+      type="image/svg+xml"
+    />
+    <link rel="manifest" href="/lakshmipriya-portfolio/manifest.webmanifest" />
+
+    <script>
+      // Apply the saved (or system) theme before first paint to avoid a flash.
+      (function () {
+        var theme = "dark";
+        try {
+          var saved = localStorage.getItem("portfolio-theme");
+          if (saved === "light" || saved === "dark") theme = saved;
+          else if (window.matchMedia("(prefers-color-scheme: light)").matches)
+            theme = "light";
+        } catch (e) {}
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

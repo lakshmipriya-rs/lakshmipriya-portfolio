@@ -1,0 +1,8 @@
+/dist
+/node_modules
+.history
+.claude
+.env
+.env.*
+.vscode
+.idea

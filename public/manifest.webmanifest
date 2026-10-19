@@ -1,0 +1,17 @@
+{
+  "name": "Lakshmipriya — DevOps · SRE · Platform Engineer",
+  "short_name": "LP",
+  "description": "DevOps, SRE, and Platform Engineer",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#06080B",
+  "theme_color": "#06080B",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
