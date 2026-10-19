@@ -1,126 +1,438 @@
 /*
- * Typography: one JetBrains Mono family, with roles controlling hierarchy.
- * Headings, labels, data, controls, and prose all use these tokens.
+ * Typography system — the single source of truth for type.
+ *
+ * Terminal-first: one monospace family (JetBrains Mono) for everything, with
+ * hierarchy carried by a fluid scale (360px → 1280px), weight, and colour.
+ * Every font-size / font-weight / line-height / letter-spacing / font-family
+ * in the app is declared here. globals.css owns layout and colour only;
+ * scripts/check-type.mjs enforces the split.
  */
 @font-face {
   font-family: "JetBrains Mono";
-  src: url("@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
+  src: url("@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2")
+    format("woff2");
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 100 800;
   font-display: swap;
 }
 
 :root {
-  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --text: #e8ecf1;
-  --text-body: color-mix(in srgb, var(--text) 85%, transparent);
-  --muted: #9aa7b5;
-  --type-hero-h1: clamp(24px, 2.2vw, 34px);
-  --type-section-h2: clamp(22px, 2.5vw, 32px);
-  --type-case-title: clamp(15px, 1.2vw, 18px);
-  --type-body-lg: 14px;
-  --type-body: 12px;
-  --type-label: 10px;
-  --type-caption: 10px;
+  --font-mono:
+    "JetBrains Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas,
+    "Liberation Mono", monospace;
+
+  /* Scale */
+  --type-hero-h1: clamp(2.125rem, 1.35rem + 3vw, 3.5rem); /* 34 → 56 */
+  --type-section-h2: clamp(1.625rem, 1.3rem + 1.4vw, 2.25rem); /* 26 → 36 */
+  --type-case-title: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem); /* 20 → 24 */
+  --type-card-title: 1.0625rem; /* 17 */
+  --type-step-title: 1rem; /* 16 */
+  --type-body-lg: clamp(
+    0.96875rem,
+    0.92rem + 0.25vw,
+    1.0625rem
+  ); /* 15.5 → 17 */
+  --type-body: 0.9375rem; /* 15 */
+  --type-body-sm: 0.875rem; /* 14 */
+  --type-small: 0.8125rem; /* 13 */
+  --type-metric-value: clamp(1.5rem, 1.3rem + 0.8vw, 2rem); /* 24 → 32 */
+  --type-stat-value: 1.125rem; /* 18 */
+  --type-contact-value: clamp(1.0625rem, 0.85rem + 1vw, 1.5rem); /* 17 → 24 */
+  --type-eyebrow: 0.75rem; /* 12 */
+  --type-label: 0.8125rem; /* 13 */
+  --type-code: 0.8125rem; /* 13 */
+
+  /* Leading */
+  --leading-display: 1.08;
+  --leading-heading: 1.18;
+  --leading-title: 1.3;
+  --leading-body: 1.7;
+  --leading-code: 1.6;
+
+  /* Tracking (monospace wants far less negative tracking than a sans) */
+  --tracking-display: -0.045em;
+  --tracking-heading: -0.03em;
+  --tracking-title: -0.02em;
+  --tracking-label: 0.04em;
 }
 
-body,
-button,
-input,
-textarea,
-select {
+/* ── Base ─────────────────────────────────────────────────────────────── */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
   font-family: var(--font-mono);
+  font-size: var(--type-body);
+  font-weight: 400;
+  line-height: var(--leading-body);
   font-variant-ligatures: none;
   font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-body { font-size: var(--type-body); font-weight: 400; line-height: 1.75; }
+button,
+input {
+  font: inherit;
+  letter-spacing: inherit;
+}
 
-.role-hero-h1 { max-width: 100%; color: var(--text); font-size: var(--type-hero-h1); font-weight: 700; line-height: 1.05; letter-spacing: -0.03em; }
-.role-section-h2 { color: var(--text); font-size: var(--type-section-h2); font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; }
-.role-case-title { color: var(--text); font-size: var(--type-case-title); font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; }
-.role-step-title { color: var(--text); font-size: 12px; font-weight: 600; line-height: 1.3; letter-spacing: 0; }
-.role-body-lg { color: var(--text-body); font-size: var(--type-body-lg); font-weight: 400; line-height: 1.75; letter-spacing: 0; }
-.role-body { color: var(--text-body); font-size: var(--type-body); font-weight: 400; line-height: 1.75; letter-spacing: 0; }
-.role-metric-value { color: var(--text); font-size: clamp(28px, 3vw, 40px); font-weight: 600; line-height: 1.1; letter-spacing: -0.02em; }
-.role-metric-label { color: var(--muted); font-size: 14px; font-weight: 400; line-height: 1.4; letter-spacing: 0; }
-.role-eyebrow { color: var(--muted); font-size: 14px; font-weight: 500; line-height: 1.3; letter-spacing: 0.06em; text-transform: uppercase; }
-.role-label { color: var(--muted); font-size: 14px; font-weight: 500; line-height: 1.3; letter-spacing: 0; }
-.role-code { color: var(--text-body); font-size: 14px; font-weight: 400; line-height: 1.6; letter-spacing: 0; }
-.role-caption { color: var(--muted); font-size: 13px; font-weight: 400; line-height: 1.4; letter-spacing: 0; }
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
+}
 
-.hero-value,
-.section-intro p,
-.contact > p,
-.case-detail p,
-.case-detail li,
-.experience-detail li,
-.step-detail p,
-.step-detail li,
-.postmortem-grid p { font: inherit; color: var(--text-body); font-size: var(--type-body); line-height: 1.75; }
-.hero-value,
-.case-result { font-size: var(--type-body-lg); }
-.section-intro h2,
-.contact h2,
-.detail-heading h3 { font: inherit; }
-.section-intro h2,
-.contact h2 { font-size: var(--type-section-h2); font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; }
-.detail-heading h3 { font-size: var(--type-case-title); font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; }
-.case-row-trigger strong { color: var(--text); font-size: 17px; font-weight: 600; line-height: 1.3; letter-spacing: 0; }
-.metric strong { font-size: clamp(28px, 3vw, 40px); font-weight: 600; line-height: 1.1; letter-spacing: -0.02em; }
-.metric span { color: var(--muted); font-size: 14px; font-weight: 400; line-height: 1.4; letter-spacing: 0; }
-.section-label { font-size: 14px; font-weight: 500; line-height: 1.3; letter-spacing: 0.06em; text-transform: uppercase; }
-.filter,
-.search-box,
-.case-row,
-.case-row-trigger,
-.tool-chip,
-.stack span,
-.case-stack button,
-.button,
-.text-button,
-.nav a,
-.wordmark,
-.status-json,
-.manifest,
-.experience-item,
-.build-step,
-.status-bar,
-.pipeline-header,
+p,
+li,
+dd {
+  text-wrap: pretty;
+}
+
+/* ── Terminal chrome ──────────────────────────────────────────────────── */
+.term-bar {
+  font-size: var(--type-eyebrow);
+  font-weight: 500;
+  line-height: 1;
+}
+.term-meta {
+  font-size: 0.6875rem;
+}
+
+.prompt,
+.pipeline-run,
+.flow-heading {
+  font-size: var(--type-label);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* ── Display & headings ───────────────────────────────────────────────── */
+.hero-title {
+  font-size: var(--type-hero-h1);
+  font-weight: 750;
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+}
+
+.section-title {
+  font-size: var(--type-section-h2);
+  font-weight: 700;
+  line-height: var(--leading-heading);
+  letter-spacing: var(--tracking-heading);
+}
+
+.case-title {
+  font-size: var(--type-case-title);
+  font-weight: 700;
+  line-height: var(--leading-title);
+  letter-spacing: var(--tracking-title);
+}
+
+.commit-title,
+.education-degree {
+  font-size: var(--type-card-title);
+  font-weight: 700;
+  line-height: var(--leading-title);
+  letter-spacing: -0.015em;
+}
+.commit-at {
+  font-weight: 500;
+}
+
+.skill-title {
+  font-size: var(--type-body-sm);
+  font-weight: 600;
+  line-height: 1.45;
+}
+.skill-name {
+  font-weight: 500;
+}
+
+.flow-detail-title {
+  font-size: var(--type-step-title);
+  font-weight: 700;
+  line-height: var(--leading-title);
+  letter-spacing: -0.01em;
+}
+
+/* ── Lead & body copy ─────────────────────────────────────────────────── */
+.hero-lead,
+.section-lead {
+  font-size: var(--type-body-lg);
+  line-height: 1.7;
+}
+
+.case-outcome,
+.flow-detail-summary,
+.commit-bullets li {
+  font-size: var(--type-body);
+  line-height: var(--leading-body);
+}
+
+.summary-text,
+.yaml-map dd {
+  font-size: var(--type-body-sm);
+  line-height: 1.65;
+}
+
+/* ── Small labels ─────────────────────────────────────────────────────── */
+.summary-label,
+.case-stack-label,
+.flow-tools-label,
+.commit-key,
+.yaml-map dt,
+.contact-label,
+.case-metrics th {
+  font-size: var(--type-small);
+  font-weight: 600;
+  line-height: 1.4;
+}
+.case-metrics th {
+  font-size: 0.6875rem;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────────── */
+.hero-name {
+  font-size: clamp(1.0625rem, 1rem + 0.35vw, 1.25rem);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+.hero-role {
+  font-size: var(--type-small);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.json {
+  font-size: var(--type-code);
+  line-height: var(--leading-code);
+}
+
+.highlight-value {
+  font-size: var(--type-metric-value);
+  font-weight: 750;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+.highlight-label {
+  font-size: var(--type-small);
+  line-height: 1.5;
+}
+
+/* ── Hero pipeline pane ───────────────────────────────────────────────── */
+.pipeline-stage strong {
+  font-size: var(--type-body-sm);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.pipeline-stage small,
+.pipeline-state {
+  font-size: var(--type-eyebrow);
+  line-height: 1.3;
+}
+.pipeline-mark {
+  font-size: var(--type-body-sm);
+  font-weight: 700;
+  line-height: 1;
+}
 .pipeline-clock,
-.pipeline-badge,
-.pipeline-popover a,
-.flow-controls button,
-.copy-button,
-.console-input,
-.command,
-.mode-tabs button { font-size: 11px; font-weight: 500; line-height: 1.3; letter-spacing: 0; }
-.log-pane,
-.log-pane p,
 .pipeline-log,
-.snippet pre,
-.console-resume pre,
-pre { font-size: 10px; font-weight: 400; line-height: 1.5; letter-spacing: 0; }
-.flow-step strong { font-size: 12px; font-weight: 600; line-height: 1.25; letter-spacing: 0; text-transform: none; }
-.flow-step small,
-.pipeline-stage small { color: var(--muted); font-size: 14px; font-weight: 400; line-height: 1.4; }
-.flow h4,
-.postmortem > h4,
-.postmortem-grid h5 { font-size: 17px; font-weight: 600; line-height: 1.3; }
-.flow-helper,
-.flow-caption,
-.pipeline-note,
-.diagram figcaption,
-.education-card small,
-.history,
-.console-hint { color: var(--muted); font-size: 13px; font-weight: 400; line-height: 1.4; letter-spacing: 0; }
-.key-result { color: var(--accent); }
+.pipeline-logs-title {
+  font-size: var(--type-eyebrow);
+  font-weight: 500;
+  line-height: var(--leading-code);
+}
+.pipeline-log {
+  font-weight: 400;
+}
+.pipeline-note {
+  font-size: var(--type-eyebrow);
+  line-height: 1.4;
+}
 
-@media (max-width: 760px) {
-  .role-hero-h1 { font-size: clamp(26px, 7vw, 38px); }
-  .role-section-h2,
-  .section-intro h2,
-  .contact h2 { font-size: clamp(22px, 5.5vw, 28px); }
-  .role-case-title,
-  .detail-heading h3 { font-size: clamp(17px, 4.5vw, 21px); }
+/* ── Case studies ─────────────────────────────────────────────────────── */
+.case-meta {
+  font-size: var(--type-small);
+  font-weight: 500;
+  line-height: 1.4;
+}
+.case-index {
+  font-weight: 700;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+.category-chip {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.case-metric-value {
+  font-size: var(--type-stat-value);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+.case-metric-label {
+  font-size: var(--type-small);
+  line-height: 1.45;
+}
+
+.flow-status-text,
+.flow-step-state,
+.flow-detail-kicker {
+  font-size: var(--type-eyebrow);
+  font-weight: 600;
+  line-height: 1.3;
+}
+.flow-control {
+  font-size: var(--type-eyebrow);
+  font-weight: 600;
+  line-height: 1;
+}
+.flow-step-label {
+  font-size: var(--type-body-sm);
+  font-weight: 500;
+  line-height: 1.35;
+}
+.flow-step-mark {
+  font-size: var(--type-body-sm);
+  font-weight: 700;
+  line-height: 1;
+}
+.flow-step-index {
+  font-size: var(--type-eyebrow);
+  font-weight: 500;
+  line-height: 1;
+}
+
+/* ── Chips ────────────────────────────────────────────────────────────── */
+.chip {
+  font-size: var(--type-small);
+  font-weight: 500;
+  line-height: 1.3;
+}
+.chip-sm {
+  font-size: var(--type-eyebrow);
+}
+.skills-legend {
+  font-size: var(--type-small);
+  line-height: 1.5;
+}
+.chip-sample {
+  font-size: var(--type-eyebrow);
+}
+.skill-count {
+  font-weight: 400;
+}
+
+/* ── Experience & education ───────────────────────────────────────────── */
+.commit-line,
+.commit-date {
+  font-size: var(--type-small);
+  font-weight: 500;
+  line-height: 1.5;
+}
+.commit-hash {
+  font-weight: 600;
+}
+.education-school {
+  font-weight: 600;
+}
+
+/* ── Contact ──────────────────────────────────────────────────────────── */
+.contact-label {
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+.contact-value {
+  font-size: var(--type-contact-value);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.03em;
+}
+.availability {
+  font-size: var(--type-small);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* ── Chrome: header, buttons, status bar, console ─────────────────────── */
+.wordmark {
+  font-size: var(--type-body-sm);
+  font-weight: 700;
+  line-height: 1;
+}
+.nav a {
+  font-size: var(--type-small);
+  font-weight: 500;
+  line-height: 1;
+}
+.mobile-menu nav a {
+  font-size: var(--type-body);
+  font-weight: 500;
+  line-height: 1.2;
+}
+.console-trigger,
+kbd {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.button {
+  font-size: var(--type-small);
+  font-weight: 600;
+  line-height: 1;
+}
+.button-sm {
+  font-size: var(--type-eyebrow);
+}
+
+.skip-link {
+  font-size: var(--type-small);
+  font-weight: 600;
+}
+
+.status-bar {
+  font-size: var(--type-eyebrow);
+  font-weight: 500;
+  line-height: 1;
+}
+@media (max-width: 380px) {
+  .status-bar {
+    font-size: 0.6875rem;
+  }
+}
+
+.console-input {
+  font-size: var(--type-small);
+  font-weight: 500;
+}
+.command-name,
+.command-hint {
+  font-size: var(--type-label);
+}
+.command-name {
+  font-weight: 500;
+}
+.history,
+.mode-tabs button,
+.console-hint {
+  font-size: var(--type-eyebrow);
+  font-weight: 500;
+  line-height: 1.4;
+}
+pre {
+  font-size: var(--type-code);
+  font-weight: 400;
+  line-height: var(--leading-code);
 }

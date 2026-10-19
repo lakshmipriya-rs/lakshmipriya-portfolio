@@ -1,14 +1,15 @@
 {
-  "name": "LP | Lakshmipriya RajeshKanna",
+  "name": "Lakshmipriya — DevOps · SRE · Platform Engineer",
   "short_name": "LP",
-  "description": "DevOps, Cloud, and Platform Engineer",
-  "start_url": "/",
+  "description": "DevOps, SRE, and Platform Engineer",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#080B0F",
-  "theme_color": "#080B0F",
+  "background_color": "#06080B",
+  "theme_color": "#06080B",
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml"
     }
