@@ -102,8 +102,8 @@ export const content: PortfolioContent = {
   focus: ["DevOps", "SRE", "Platform Engineering"],
   location: "Philadelphia, PA",
   email: "rs.lakshmipriya08@gmail.com",
-  github: "https://github.com/Lakshmipriya0812",
-  githubHandle: "Lakshmipriya0812",
+  github: "https://github.com/lakshmipriya-rs",
+  githubHandle: "lakshmipriya-rs",
   linkedin: "https://www.linkedin.com/in/lakshmipriya-r/",
   linkedinHandle: "in/lakshmipriya-r",
   resume: "projects/Lakshmipriya.pdf",
@@ -113,7 +113,7 @@ export const content: PortfolioContent = {
 
   highlights: [
     {
-      value: "~14 min",
+      value: "~20 min",
       label: "VM provisioning, down from 7 days",
       caseId: "vm-provisioning",
     },
