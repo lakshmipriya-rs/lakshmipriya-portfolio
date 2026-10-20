@@ -144,7 +144,7 @@ export function HeroPipeline() {
           <span>
             {completed ? "✓ ready · handoff complete" : `elapsed ${clock}`}
           </span>
-          <span>target ~14:00</span>
+          <span>target ~20:00</span>
         </div>
 
         <div className="pipeline-logs" aria-hidden="true">
